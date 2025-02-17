@@ -8,10 +8,7 @@ parser grammar RegParser;
 options { tokenVocab = RegLexer; }
 
 program
-    : e
-    | program SEQ program
-    | program NON_DET_CHOICE program
-    //| program*
+    : e (SEQ e | NON_DET_CHOICE e)*
     ;
 
 e
