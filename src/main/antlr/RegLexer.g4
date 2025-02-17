@@ -8,7 +8,7 @@ lexer grammar RegLexer;
 SEQ: ';';
 NON_DET_CHOICE: '|';
 COND: '?';
-SHKIP: 'skip';
+NOOP: 'skip';
 NUM: [0-9]+;
 ID: [a-zA-Z0-9]+;
 ASSIGN: ':=';

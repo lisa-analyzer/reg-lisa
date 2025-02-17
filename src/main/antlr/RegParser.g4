@@ -13,7 +13,7 @@ program
 
 e
     : LPAR e RPAR
-    | SHKIP
+    | NOOP
     | ID ASSIGN a
     | b COND
     | e (SEQ | NON_DET_CHOICE) e
