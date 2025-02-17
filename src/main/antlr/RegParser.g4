@@ -2,7 +2,7 @@ parser grammar RegParser;
 
 @ header
 {
-	package it.unipr.reg.antlr;
+    package it.unipr.reg.antlr;
 }
 
 options { tokenVocab = RegLexer; }

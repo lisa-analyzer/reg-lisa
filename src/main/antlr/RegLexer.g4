@@ -2,11 +2,11 @@ lexer grammar RegLexer;
 
 @ lexer :: header
 {
-	package it.unipr.reg.antlr;
+    package it.unipr.reg.antlr;
 }
 
 SEQ: ';';
-NON_DET_CHOICE: '(+)';
+NON_DET_CHOICE: '|';
 COND: '?';
 SHKIP: 'skip';
 NUM: [0-9]+;
@@ -26,5 +26,5 @@ LPAR: '(';
 RPAR: ')';
 
 WS
-   : [ \n\t\r] -> skip
-   ;
+    : [ \n\t\r] -> skip
+    ;
