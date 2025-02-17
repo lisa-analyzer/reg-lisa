@@ -22,6 +22,8 @@ TRUE: 'tt';
 FALSE: 'ff';
 AND: '&';
 NOT: '!';
+LPAR: '(';
+RPAR: ')';
 
 WS
    : [ \n\t\r] -> skip
