@@ -1,2 +1,4 @@
 x := 0 ;
 y := y + x | skip
+
+(x < 0 ? ; x := x + 1) ; skip

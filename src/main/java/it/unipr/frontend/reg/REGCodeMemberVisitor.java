@@ -28,21 +28,6 @@ public class REGCodeMemberVisitor extends RegParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitOp(RegParser.OpContext ctx) {
-        System.out.println("Visiting an operation");
-        System.out.println("LINE: " + ctx.getStart().getLine());
-        if (ctx.SEQ() != null) {
-            System.out.println("Executing sequential operation");
-            visit(ctx.e(0));
-            visit(ctx.e(1));
-        } else {
-            System.out.println("Executing random choice operation");
-            visit(Math.random() < 0.5 ? ctx.e(0) : ctx.e(1));
-        }
-        return null;
-    }
-
-    @Override
     public Object visitE_par(RegParser.E_parContext ctx) {
         System.out.println("Visiting parenthesized expression");
         System.out.println("LINE: " + ctx.getStart().getLine());
@@ -57,6 +42,26 @@ public class REGCodeMemberVisitor extends RegParserBaseVisitor<Object> {
             System.exit(0);
         }
         return null;
+    }
+
+    @Override
+    public Object visitSeq(RegParser.SeqContext ctx) {
+        System.out.println("Visiting an operation");
+        System.out.println("LINE: " + ctx.getStart().getLine());
+        if (ctx.SEQ() != null) {
+            System.out.println("Executing sequential operation");
+            visit(ctx.e(0));
+            visit(ctx.e(1));
+        } else {
+            System.out.println("Executing random choice operation");
+            visit(Math.random() < 0.5 ? ctx.e(0) : ctx.e(1));
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitE_ndc(RegParser.E_ndcContext ctx) {
+        return super.visitE_ndc(ctx);
     }
 
     @Override
