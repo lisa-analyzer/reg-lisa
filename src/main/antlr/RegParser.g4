@@ -8,34 +8,30 @@ parser grammar RegParser;
 options { tokenVocab = RegLexer; }
 
 program
-    : e ((SEQ | NON_DET_CHOICE) e)* EOF
+    : e (op=(SEQ | NON_DET_CHOICE) e)* EOF
     ;
 
 e
-    : LPAR e RPAR
-    | NOOP
-    | ID ASSIGN a
-    | b COND
-    | e (SEQ | NON_DET_CHOICE) e
-    | e TIMES
+    : LPAR e RPAR #e_par
+    | NOOP #noop
+    | ID ASSIGN a #assign
+    | b COND #cond
+    | e op=(SEQ | NON_DET_CHOICE) e #op
+    | e TIMES #kleene
     ;
 
 a
-    : LPAR a RPAR
-    | ID
-    | NUM
-    | a PLUS a
-    | a MINUS a
-    | a TIMES a
+    : LPAR a RPAR #a_par
+    | ID    #id
+    | NUM  #num
+    | a op=(PLUS | MINUS | TIMES) a #plus_minus_times
     ;
 
 b
-    : LPAR b RPAR
-    | TRUE
-    | FALSE
-    | a EQ a
-    | a LEQ a
-    | a LE a
-    | b AND b
-    | NOT b
+    : LPAR b RPAR #b_par
+    | TRUE #true
+    | FALSE #false
+    | a op=(EQ | LEQ | LE) a #eq_leq_le
+    | b AND b #and
+    | NOT b #not
     ;
