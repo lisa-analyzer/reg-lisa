@@ -4,8 +4,10 @@ package it.unipr.frontend;
  */
 
 import it.unipr.frontend.reg.REGCodeMemberVisitor;
+import it.unipr.frontend.reg.REGFrontend;
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
+import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -30,9 +32,10 @@ public class Main {
 
 		ParseTree tree = parser.program();
 
-		REGCodeMemberVisitor visitor = new REGCodeMemberVisitor();
 
-		visitor.visit(tree);
+		REGFrontend frontend = new REGFrontend(args[0]);
+
+		frontend.visit(tree);
 	}
 
 }
