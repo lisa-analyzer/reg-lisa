@@ -10,9 +10,8 @@ import it.unive.lisa.program.SourceCodeLocation;
 import it.unive.lisa.program.cfg.CFG;
 import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import it.unive.lisa.program.cfg.Parameter;
-import it.unive.lisa.program.cfg.edge.SequentialEdge;
-import it.unive.lisa.program.cfg.statement.NoOp;
-import it.unive.lisa.program.cfg.statement.Statement;
+import it.unive.lisa.program.cfg.statement.*;
+import it.unive.lisa.program.cfg.statement.literal.Int32Literal;
 import it.unive.lisa.program.type.BoolType;
 import it.unive.lisa.program.type.Int32Type;
 import org.antlr.v4.runtime.CharStreams;
@@ -60,10 +59,10 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
         this.file = file;
         program = new Program(new REGFeatures(), new REGTypeSystem());
         // unita di codice, per noi è il programma
-        ClassUnit unit = new ClassUnit(new SourceCodeLocation(file, -1, -1), program, "program", false);
+        ClassUnit unit = new ClassUnit(new SourceCodeLocation(file, 0, 0), program, "program", false);
         // descrittore del codice, sarebbe la signature delle funzioni, ma
         // noi non abbiamo funzioni, quindi è il programma
-        CodeMemberDescriptor cfgDesc = new CodeMemberDescriptor(new SourceCodeLocation(file, -1, -1), unit, false, "function", new Parameter[]{});
+        CodeMemberDescriptor cfgDesc = new CodeMemberDescriptor(new SourceCodeLocation(file, 0, 0), unit, false, "function", new Parameter[]{});
         // inizializzo il CFG
         currentCFG = new CFG(cfgDesc);
     }
@@ -100,10 +99,11 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
             // il fatto che vanno linkati da un edge sequenziale
             // quindi tenere traccia dell'ultimo statement di ogni coppia
             // e collegarlo al primo statement della coppia successiva
-            Pair<Statement, Statement> pair = (Pair<Statement, Statement>) visit(ctx.e(i));
+            visit(ctx.e(i));
+            //Pair<Statement, Statement> pair = (Pair<Statement, Statement>) visit(ctx.e(i));
             // non così
-            SequentialEdge se = new SequentialEdge(pair.getLeft(), pair.getRight());
-            currentCFG.addEdge(se);
+            //SequentialEdge se = new SequentialEdge(pair.getLeft(), pair.getRight());
+            //currentCFG.addEdge(se);
         }
         System.out.println("Program execution finished");
         return program;
@@ -125,6 +125,57 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
     public Pair<Statement, Statement> visitAssign(RegParser.AssignContext ctx) {
         // anche qua LiSA ha gia una classe per l'assign, quindi è simile al noop
         // soltanto che dobbiamo espandere l'assegnamento per avere l'espressione
+
+        // grammatica# e: ID ASSIGN a
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        // target è la variabile a sinistra dell'uguale
+        VariableRef target = new VariableRef(currentCFG, loc, ctx.ID().getText());
+        // exp è l'espressione a destra dell'uguale
+        Expression exp = (Expression) visit(ctx.a());
+        System.out.println("Assigning " + target + " to " + exp);
+        Assignment assign = new Assignment(currentCFG, loc, target, exp);
+        currentCFG.addNode(assign);
+        System.out.println(assign);
+        return Pair.of(assign, assign);
+    }
+
+    @Override
+    public Expression visitNum(RegParser.NumContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        return new Int32Literal(currentCFG, loc, Integer.parseInt(ctx.NUM().getText()));
+    }
+
+    @Override
+    public Expression visitPlus_minus(RegParser.Plus_minusContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression left = (Expression) visit(ctx.a(0));
+        Expression right = (Expression) visit(ctx.a(1));
+        System.out.println("Creating binary expression " + left + " " + ctx.op.getText() + " " + right);
+        switch (ctx.op.getText()) {
+            case "+":
+                return new Int32Literal(currentCFG, loc, ((Int32Literal) left).getValue() + ((Int32Literal) right).getValue());
+            case "-":
+                return new Int32Literal(currentCFG, loc, ((Int32Literal) left).getValue() - ((Int32Literal) right).getValue());
+            default:
+                throw new UnsupportedOperationException("Unsupported operator " + ctx.op.getText());
+        }
+    }
+
+    @Override
+    public Object visitTimes(RegParser.TimesContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression left = (Expression) visit(ctx.a(0));
+        Expression right = (Expression) visit(ctx.a(1));
+        return new Int32Literal(currentCFG, loc, ((Int32Literal) left).getValue() * ((Int32Literal) right).getValue());
+    }
+
+    @Override
+    public Expression visitA_par(RegParser.A_parContext ctx) {
+        return (Expression) visit(ctx.a());
+    }
+
+    @Override
+    public Expression visitE_par(RegParser.E_parContext ctx) {
+        return (Expression) visit(ctx.e());
     }
 }
