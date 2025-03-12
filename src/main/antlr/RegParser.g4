@@ -27,7 +27,8 @@ a
     : LPAR a RPAR                                               #a_par
     | ID                                                        #id
     | NUM                                                       #num
-    | a op=(PLUS | MINUS | TIMES) a                             #plus_minus_times
+    | a TIMES a                                                 #times
+    | a op=(PLUS | MINUS) a                                     #plus_minus
     ;
 
 b
