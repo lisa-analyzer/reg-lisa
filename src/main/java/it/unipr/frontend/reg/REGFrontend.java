@@ -13,15 +13,12 @@ import it.unive.lisa.program.cfg.Parameter;
 import it.unive.lisa.program.cfg.edge.SequentialEdge;
 import it.unive.lisa.program.cfg.statement.*;
 import it.unive.lisa.program.cfg.statement.literal.Int32Literal;
-import it.unive.lisa.program.type.BoolType;
-import it.unive.lisa.program.type.Int32Type;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,15 +42,7 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
 
 
     public static Program processFile(String file) throws IOException {
-        return new REGFrontend(file).work(null);
-    }
-
-    public static Program processText(String text) throws IOException {
-        try (InputStream is = new ByteArrayInputStream(text.getBytes())) {
-            return new REGFrontend("in-memory.reg").work(is);
-        } catch (IOException e) {
-            throw new IOException("Exception while parsing the input text", e);
-        }
+        return new REGFrontend(file).work();
     }
 
 
@@ -69,26 +58,18 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
         currentCFG = new CFG(cfgDesc);
     }
 
-    private Program work(InputStream inputStream) throws IOException {
+    private Program work() throws IOException {
 
         try {
-            log.info("Reading file... " + file);
             RegLexer lexer;
-            if (inputStream == null) try (InputStream stream = new FileInputStream(file)) {
+            try (InputStream stream = new FileInputStream(file)) {
                 lexer = new RegLexer(CharStreams.fromStream(stream, StandardCharsets.UTF_8));
             }
-            else lexer = new RegLexer(CharStreams.fromStream(inputStream, StandardCharsets.UTF_8));
 
             RegParser parser = new RegParser(new CommonTokenStream(lexer));
 
-            Program p = visitProgram(parser.program());
-
-            p.getTypes().registerType(BoolType.INSTANCE);
-            p.getTypes().registerType(Int32Type.INSTANCE);
-
-            return p;
+            return visitProgram(parser.program());
         } catch (IOException e) {
-            log.fatal("Unable to open " + file, e);
             throw new IOException("Unable to open " + file, e);
         }
     }
@@ -96,6 +77,7 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
     @Override
     public Program visitProgram(RegParser.ProgramContext ctx) {
         visit(ctx.expr());
+        program.addEntryPoint(currentCFG);
         return program;
     }
 
