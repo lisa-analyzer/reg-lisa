@@ -10,6 +10,7 @@ import it.unive.lisa.program.SourceCodeLocation;
 import it.unive.lisa.program.cfg.CFG;
 import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import it.unive.lisa.program.cfg.Parameter;
+import it.unive.lisa.program.cfg.edge.SequentialEdge;
 import it.unive.lisa.program.cfg.statement.*;
 import it.unive.lisa.program.cfg.statement.literal.Int32Literal;
 import it.unive.lisa.program.type.BoolType;
@@ -25,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 import static it.unipr.frontend.reg.Antlr4Utils.getCol;
 import static it.unipr.frontend.reg.Antlr4Utils.getLine;
@@ -93,20 +95,40 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
 
     @Override
     public Program visitProgram(RegParser.ProgramContext ctx) {
-        System.out.println("Starting program execution");
-        for (int i = 0; i < ctx.e().size(); i++) {
-            // ogni espressione è una coppia di statement, sarà da implementare
-            // il fatto che vanno linkati da un edge sequenziale
-            // quindi tenere traccia dell'ultimo statement di ogni coppia
-            // e collegarlo al primo statement della coppia successiva
-            visit(ctx.e(i));
-            //Pair<Statement, Statement> pair = (Pair<Statement, Statement>) visit(ctx.e(i));
-            // non così
-            //SequentialEdge se = new SequentialEdge(pair.getLeft(), pair.getRight());
-            //currentCFG.addEdge(se);
-        }
-        System.out.println("Program execution finished");
+        visit(ctx.expr());
         return program;
+    }
+
+    @Override
+    public Pair<Statement, Statement> visitSeq(RegParser.SeqContext ctx) {
+        System.out.println("Starting program execution");
+        Statement last;
+
+        // Create a list to store the statements of the CFG.
+        // Retrieve the first statement (entrypoint) of the CFG.
+        ArrayList<Statement> stm = new ArrayList<>();
+        Statement st = ( (Pair<Statement, Statement>) visit(ctx.e(0))).getLeft();
+        stm.add(st);
+        currentCFG.addNode(st);
+        currentCFG.getEntrypoints().add(st);
+        last = st;
+
+
+        // For each opcode of the program, create a statement and add it to the
+        // CFG.
+        for (int i = 1; i < ctx.e().size(); i++) {
+
+            st = ( (Pair<Statement, Statement>) visit(ctx.e(i))).getLeft();
+            currentCFG.addNode(st);
+            stm.add(st);
+            currentCFG.addEdge(new SequentialEdge(last, st));
+            last = st;
+        }
+
+        System.out.println(currentCFG.getEdges());
+
+        System.out.println("Program execution finished");
+        return Pair.of(stm.get(0), st);
     }
 
     @Override
@@ -132,10 +154,10 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
         VariableRef target = new VariableRef(currentCFG, loc, ctx.ID().getText());
         // exp è l'espressione a destra dell'uguale
         Expression exp = (Expression) visit(ctx.a());
-        System.out.println("Assigning " + target + " to " + exp);
+        //System.out.println("Assigning " + target + " to " + exp);
         Assignment assign = new Assignment(currentCFG, loc, target, exp);
         currentCFG.addNode(assign);
-        System.out.println(assign);
+        //System.out.println(assign);
         return Pair.of(assign, assign);
     }
 
@@ -150,7 +172,7 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
         Expression left = (Expression) visit(ctx.a(0));
         Expression right = (Expression) visit(ctx.a(1));
-        System.out.println("Creating binary expression " + left + " " + ctx.op.getText() + " " + right);
+        //System.out.println("Creating binary expression " + left + " " + ctx.op.getText() + " " + right);
         switch (ctx.op.getText()) {
             case "+":
                 return new Int32Literal(currentCFG, loc, ((Int32Literal) left).getValue() + ((Int32Literal) right).getValue());
@@ -162,7 +184,7 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitTimes(RegParser.TimesContext ctx) {
+    public Expression visitTimes(RegParser.TimesContext ctx) {
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
         Expression left = (Expression) visit(ctx.a(0));
         Expression right = (Expression) visit(ctx.a(1));
@@ -176,6 +198,6 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
 
     @Override
     public Expression visitE_par(RegParser.E_parContext ctx) {
-        return (Expression) visit(ctx.e());
+        return (Expression) visit(ctx.expr());
     }
 }

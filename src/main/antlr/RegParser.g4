@@ -8,17 +8,20 @@ parser grammar RegParser;
 options { tokenVocab = RegLexer; }
 
 program
-    : e (SEQ e)* EOF
+    : expr EOF
+    ;
+
+expr
+    : e (SEQ e)*                                               #seq
     ;
 
 e
-    : LPAR e RPAR                                               #e_par
+    : LPAR expr RPAR                                            #e_par
     | LPAR e NON_DET_CHOICE e RPAR                              #e_ndc
     | NOOP                                                      #noop
     // procediamo con l'assign e la add
     | ID ASSIGN a                                               #assign
     | b COND                                                    #cond
-    | e SEQ e                                                   #seq
     // kleene lasciamola per ultima
     | e TIMES                                                   #kleene
     ;
