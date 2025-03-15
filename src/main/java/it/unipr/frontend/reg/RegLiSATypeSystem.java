@@ -1,4 +1,4 @@
-package it.unipr.frontend.reg.types;
+package it.unipr.frontend.reg;
 
 import it.unive.lisa.program.type.BoolType;
 import it.unive.lisa.program.type.Int32Type;
@@ -8,7 +8,7 @@ import it.unive.lisa.type.NumericType;
 import it.unive.lisa.type.Type;
 import it.unive.lisa.type.TypeSystem;
 
-public class REGTypeSystem extends TypeSystem {
+public class RegLiSATypeSystem extends TypeSystem {
 
     @Override
     public BooleanType getBooleanType() {

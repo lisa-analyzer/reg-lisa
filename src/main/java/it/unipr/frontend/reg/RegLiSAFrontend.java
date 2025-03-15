@@ -1,6 +1,20 @@
 package it.unipr.frontend.reg;
 
-import it.unipr.frontend.reg.types.REGTypeSystem;
+import static it.unipr.frontend.reg.Antlr4Utils.getCol;
+import static it.unipr.frontend.reg.Antlr4Utils.getLine;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
@@ -11,24 +25,15 @@ import it.unive.lisa.program.cfg.CFG;
 import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import it.unive.lisa.program.cfg.Parameter;
 import it.unive.lisa.program.cfg.edge.SequentialEdge;
-import it.unive.lisa.program.cfg.statement.*;
+import it.unive.lisa.program.cfg.statement.Assignment;
+import it.unive.lisa.program.cfg.statement.Expression;
+import it.unive.lisa.program.cfg.statement.NoOp;
+import it.unive.lisa.program.cfg.statement.Ret;
+import it.unive.lisa.program.cfg.statement.Statement;
+import it.unive.lisa.program.cfg.statement.VariableRef;
 import it.unive.lisa.program.cfg.statement.literal.Int32Literal;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-
-import static it.unipr.frontend.reg.Antlr4Utils.getCol;
-import static it.unipr.frontend.reg.Antlr4Utils.getLine;
-
-public class REGFrontend extends RegParserBaseVisitor<Object> {
+public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 
     private final String file;
 
@@ -38,24 +43,27 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
 
     private CodeMemberDescriptor descriptor;
 
-    private static final Logger log = LogManager.getLogger(REGFrontend.class);
+    private static final Logger log = LogManager.getLogger(RegLiSAFrontend.class);
 
 
     public static Program processFile(String file) throws IOException {
-        return new REGFrontend(file).work();
+        return new RegLiSAFrontend(file).work();
     }
 
 
-    public REGFrontend(String file) {
+    public RegLiSAFrontend(String file) {
         this.file = file;
-        program = new Program(new REGFeatures(), new REGTypeSystem());
+        this.program = new Program(new RegLiSAFeatures(), new RegLiSATypeSystem());
         // unita di codice, per noi è il programma
         ClassUnit unit = new ClassUnit(new SourceCodeLocation(file, 0, 0), program, "program", false);
         // descrittore del codice, sarebbe la signature delle funzioni, ma
         // noi non abbiamo funzioni, quindi è il programma
         CodeMemberDescriptor cfgDesc = new CodeMemberDescriptor(new SourceCodeLocation(file, 0, 0), unit, false, "function", new Parameter[]{});
         // inizializzo il CFG
-        currentCFG = new CFG(cfgDesc);
+        this.currentCFG = new CFG(cfgDesc);
+        unit.addCodeMember(currentCFG);
+        program.addUnit(unit);
+
     }
 
     private Program work() throws IOException {
@@ -77,11 +85,11 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
     @Override
     public Program visitProgram(RegParser.ProgramContext ctx) {
         visit(ctx.expr());
-        program.addEntryPoint(currentCFG);
         return program;
     }
 
-    @Override
+    @SuppressWarnings("unchecked")
+	@Override
     public Pair<Statement, Statement> visitSeq(RegParser.SeqContext ctx) {
         System.out.println("Starting program execution");
         Statement last;
@@ -110,7 +118,11 @@ public class REGFrontend extends RegParserBaseVisitor<Object> {
         System.out.println(currentCFG.getEdges());
 
         System.out.println("Program execution finished");
-        return Pair.of(stm.get(0), st);
+        
+        Ret eof = new Ret(currentCFG, new SourceCodeLocation(file, 100, 100));
+        currentCFG.addNode(eof);
+        currentCFG.addEdge(new SequentialEdge(st, eof));
+        return Pair.of(stm.get(0), eof);
     }
 
     @Override

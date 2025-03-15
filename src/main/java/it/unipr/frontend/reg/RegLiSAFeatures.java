@@ -10,7 +10,7 @@ import it.unive.lisa.program.language.resolution.ParameterMatchingStrategy;
 import it.unive.lisa.program.language.validation.BaseValidationLogic;
 import it.unive.lisa.program.language.validation.ProgramValidationLogic;
 
-public class REGFeatures extends LanguageFeatures {
+public class RegLiSAFeatures extends LanguageFeatures {
 
     @Override
     public ParameterMatchingStrategy getMatchingStrategy() {
