@@ -1,20 +1,5 @@
 package it.unipr.frontend.reg;
 
-import static it.unipr.frontend.reg.Antlr4Utils.getCol;
-import static it.unipr.frontend.reg.Antlr4Utils.getLine;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
@@ -24,14 +9,28 @@ import it.unive.lisa.program.SourceCodeLocation;
 import it.unive.lisa.program.cfg.CFG;
 import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import it.unive.lisa.program.cfg.Parameter;
+import it.unive.lisa.program.cfg.VariableTableEntry;
 import it.unive.lisa.program.cfg.edge.SequentialEdge;
-import it.unive.lisa.program.cfg.statement.Assignment;
-import it.unive.lisa.program.cfg.statement.Expression;
-import it.unive.lisa.program.cfg.statement.NoOp;
-import it.unive.lisa.program.cfg.statement.Ret;
-import it.unive.lisa.program.cfg.statement.Statement;
-import it.unive.lisa.program.cfg.statement.VariableRef;
+import it.unive.lisa.program.cfg.statement.*;
 import it.unive.lisa.program.cfg.statement.literal.Int32Literal;
+import it.unive.lisa.program.cfg.statement.numeric.Addition;
+import it.unive.lisa.program.cfg.statement.numeric.Multiplication;
+import it.unive.lisa.program.cfg.statement.numeric.Subtraction;
+import it.unive.lisa.type.Untyped;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+
+import static it.unipr.frontend.reg.Antlr4Utils.getCol;
+import static it.unipr.frontend.reg.Antlr4Utils.getLine;
 
 public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 
@@ -61,6 +60,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         CodeMemberDescriptor cfgDesc = new CodeMemberDescriptor(new SourceCodeLocation(file, 0, 0), unit, false, "function", new Parameter[]{});
         // inizializzo il CFG
         this.currentCFG = new CFG(cfgDesc);
+        this.descriptor = cfgDesc;
         unit.addCodeMember(currentCFG);
         program.addUnit(unit);
 
@@ -89,7 +89,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
     }
 
     @SuppressWarnings("unchecked")
-	@Override
+    @Override
     public Pair<Statement, Statement> visitSeq(RegParser.SeqContext ctx) {
         System.out.println("Starting program execution");
         Statement last;
@@ -97,7 +97,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         // Create a list to store the statements of the CFG.
         // Retrieve the first statement (entrypoint) of the CFG.
         ArrayList<Statement> stm = new ArrayList<>();
-        Statement st = ( (Pair<Statement, Statement>) visit(ctx.e(0))).getLeft();
+        Statement st = ((Pair<Statement, Statement>) visit(ctx.e(0))).getLeft();
         stm.add(st);
         currentCFG.addNode(st);
         currentCFG.getEntrypoints().add(st);
@@ -108,7 +108,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         // CFG.
         for (int i = 1; i < ctx.e().size(); i++) {
 
-            st = ( (Pair<Statement, Statement>) visit(ctx.e(i))).getLeft();
+            st = ((Pair<Statement, Statement>) visit(ctx.e(i))).getLeft();
             currentCFG.addNode(st);
             stm.add(st);
             currentCFG.addEdge(new SequentialEdge(last, st));
@@ -118,7 +118,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         System.out.println(currentCFG.getEdges());
 
         System.out.println("Program execution finished");
-        
+
         Ret eof = new Ret(currentCFG, new SourceCodeLocation(file, 100, 100));
         currentCFG.addNode(eof);
         currentCFG.addEdge(new SequentialEdge(st, eof));
@@ -169,12 +169,21 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         //System.out.println("Creating binary expression " + left + " " + ctx.op.getText() + " " + right);
         switch (ctx.op.getText()) {
             case "+":
-                return new Int32Literal(currentCFG, loc, ((Int32Literal) left).getValue() + ((Int32Literal) right).getValue());
+                return new Addition(currentCFG, loc, left, right);
             case "-":
-                return new Int32Literal(currentCFG, loc, ((Int32Literal) left).getValue() - ((Int32Literal) right).getValue());
+                return new Subtraction(currentCFG, loc, left, right);
             default:
                 throw new UnsupportedOperationException("Unsupported operator " + ctx.op.getText());
         }
+    }
+
+    @Override
+    public Expression visitId(RegParser.IdContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        descriptor.addVariable(new VariableTableEntry(loc, 0, ctx.ID().getText()));
+        VariableRef var = new VariableRef(currentCFG, loc, ctx.ID().getText());
+        System.out.println("Created variable " + var);
+        return var;
     }
 
     @Override
@@ -182,7 +191,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
         Expression left = (Expression) visit(ctx.a(0));
         Expression right = (Expression) visit(ctx.a(1));
-        return new Int32Literal(currentCFG, loc, ((Int32Literal) left).getValue() * ((Int32Literal) right).getValue());
+        return new Multiplication(currentCFG, loc, left, right);
     }
 
     @Override
