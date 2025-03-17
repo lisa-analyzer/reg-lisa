@@ -87,54 +87,42 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         return program;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     public Pair<Statement, Statement> visitSeq(RegParser.SeqContext ctx) {
-        Statement last;
+        Pair<Statement, Statement> firstPair = (Pair<Statement, Statement>) visit(ctx.e(0));
 
-        // Create a list to store the statements of the CFG.
-        // Retrieve the first statement (entrypoint) of the CFG.
-        ArrayList<Statement> stm = new ArrayList<>();
-        Statement st = ((Pair<Statement, Statement>) visit(ctx.e(0))).getLeft();
-        stm.add(st);
-        System.out.println("1° statement: " + st);
-        // TODO: this should be unneeded
-        currentCFG.addNode(st);
+        Statement firstEntry = firstPair.getLeft();
+        Statement firstExit = firstPair.getRight();
 
-        currentCFG.getEntrypoints().add(st);
-        last = st;
+        // aggiungo il primo nodo al CFG
+        currentCFG.addNode(firstEntry);
+        currentCFG.getEntrypoints().add(firstEntry);
 
-        //System.out.println("Expressions: " + ctx.e().size());
+        // last è l'exit del primo statement
+        Statement last = firstExit;
 
-
-        // For each opcode of the program, create a statement and add it to the CFG.
         for (int i = 1; i < ctx.e().size(); i++) {
+            Pair<Statement, Statement> pair = (Pair<Statement, Statement>) visit(ctx.e(i));
+            Statement entry = pair.getLeft();
+            Statement exit = pair.getRight();
 
-            Pair<Statement, Statement> pair = ((Pair<Statement, Statement>) visit(ctx.e(i)));
-            // TODO: secondo me questo è un getRight...
-            st = pair.getLeft();
-            System.out.println("Pair: " + pair);
-            System.out.println(i + 1 + "° statement: " + st);
+            // exit precedente -> entry corrente
+            currentCFG.addNode(entry);
+            currentCFG.addEdge(new SequentialEdge(last, entry));
 
-            // TODO: this should be unneeded
-            currentCFG.addNode(st);
-            stm.add(st);
-            currentCFG.addEdge(new SequentialEdge(last, st));
-
-            System.out.println("Edge: " + last + " -> " + st);
-
-            last = st;
+            // last è l'exit corrente
+            last = exit;
         }
 
-        //System.out.println(currentCFG.getEdges());
-        //System.out.println(currentCFG.getNodes());
-
-
+        // TODO: 100, 100 hardcodati?
         Ret eof = new Ret(currentCFG, new SourceCodeLocation(file, 100, 100));
         currentCFG.addNode(eof);
         currentCFG.addEdge(new SequentialEdge(last, eof));
-        return Pair.of(stm.get(0), eof);
+
+        return Pair.of(firstEntry, eof);
     }
+
 
     @Override
     public Pair<Statement, Statement> visitNoop(RegParser.NoopContext ctx) {
@@ -230,8 +218,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         currentCFG.addEdge(new SequentialEdge(init, right.getLeft()));
 
         // nodo finale join
-        // TODO: questo dovrebbe essere un NoOp ma non genera il CFG senza
-        Ret end = new Ret(currentCFG, new SourceCodeLocation(file, getLine(ctx) + 1, getCol(ctx)));
+        NoOp end = new NoOp(currentCFG, new SourceCodeLocation(file, getLine(ctx) + 1, getCol(ctx)));
         currentCFG.addNode(end);
 
         currentCFG.addEdge(new SequentialEdge(left.getRight(), end));
