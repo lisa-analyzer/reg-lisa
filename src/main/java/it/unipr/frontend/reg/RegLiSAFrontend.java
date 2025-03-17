@@ -26,7 +26,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 
 import static it.unipr.frontend.reg.Antlr4Utils.getCol;
 import static it.unipr.frontend.reg.Antlr4Utils.getLine;
@@ -83,13 +82,12 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 
     @Override
     public Program visitProgram(RegParser.ProgramContext ctx) {
-        visit(ctx.expr());
-        return program;
+        return (Program) visit(ctx.expr());
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Pair<Statement, Statement> visitSeq(RegParser.SeqContext ctx) {
+    public Program visitSeq(RegParser.SeqContext ctx) {
         Pair<Statement, Statement> firstPair = (Pair<Statement, Statement>) visit(ctx.e(0));
 
         Statement firstEntry = firstPair.getLeft();
@@ -119,8 +117,9 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         Ret eof = new Ret(currentCFG, new SourceCodeLocation(file, 100, 100));
         currentCFG.addNode(eof);
         currentCFG.addEdge(new SequentialEdge(last, eof));
+        currentCFG.simplify();
 
-        return Pair.of(firstEntry, eof);
+        return program;
     }
 
 
@@ -226,8 +225,5 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 
         // ritorno l'inizio e la fine
         return Pair.of(init, end);
-
     }
-
-
 }
