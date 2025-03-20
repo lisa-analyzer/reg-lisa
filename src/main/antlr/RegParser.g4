@@ -20,9 +20,9 @@ e
    | NOOP # noop
    // procediamo con l'assign e la add
    | ID ASSIGN a # assign
-   | b COND # cond
+   | LPAR b COND SEQ e RPAR # cond
    // kleene lasciamola per ultima
-   | e TIMES # kleene
+   | LPAR b COND SEQ (e (SEQ e)*)? RPAR TIMES # kleene
    ;
 
 a

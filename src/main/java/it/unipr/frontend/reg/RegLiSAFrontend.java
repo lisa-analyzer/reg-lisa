@@ -10,9 +10,17 @@ import it.unive.lisa.program.cfg.CFG;
 import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import it.unive.lisa.program.cfg.Parameter;
 import it.unive.lisa.program.cfg.VariableTableEntry;
+import it.unive.lisa.program.cfg.edge.FalseEdge;
 import it.unive.lisa.program.cfg.edge.SequentialEdge;
+import it.unive.lisa.program.cfg.edge.TrueEdge;
 import it.unive.lisa.program.cfg.statement.*;
+import it.unive.lisa.program.cfg.statement.comparison.Equal;
+import it.unive.lisa.program.cfg.statement.comparison.LessOrEqual;
+import it.unive.lisa.program.cfg.statement.comparison.LessThan;
 import it.unive.lisa.program.cfg.statement.literal.Int32Literal;
+import it.unive.lisa.program.cfg.statement.literal.TrueLiteral;
+import it.unive.lisa.program.cfg.statement.logic.And;
+import it.unive.lisa.program.cfg.statement.logic.Not;
 import it.unive.lisa.program.cfg.statement.numeric.Addition;
 import it.unive.lisa.program.cfg.statement.numeric.Multiplication;
 import it.unive.lisa.program.cfg.statement.numeric.Subtraction;
@@ -122,6 +130,9 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         return program;
     }
 
+    /*
+    * ESPRESSIONI
+    * */
 
     @Override
     public Pair<Statement, Statement> visitNoop(RegParser.NoopContext ctx) {
@@ -150,6 +161,43 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         currentCFG.addNode(assign);
         return Pair.of(assign, assign);
     }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Pair<Statement, Statement> visitE_ndc(RegParser.E_ndcContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+
+        // nodo iniziale skip
+        NoOp init = new NoOp(currentCFG, loc);
+        currentCFG.addNode(init);
+
+        // visitiamo tutti e due i rami
+        Pair<Statement, Statement> left = (Pair<Statement, Statement>) visit(ctx.e(0));
+        Pair<Statement, Statement> right = (Pair<Statement, Statement>) visit(ctx.e(1));
+
+        currentCFG.addEdge(new SequentialEdge(init, left.getLeft()));
+        currentCFG.addEdge(new SequentialEdge(init, right.getLeft()));
+
+        // nodo finale join
+        NoOp end = new NoOp(currentCFG, new SourceCodeLocation(file, getLine(ctx) + 1, getCol(ctx)));
+        currentCFG.addNode(end);
+
+        currentCFG.addEdge(new SequentialEdge(left.getRight(), end));
+        currentCFG.addEdge(new SequentialEdge(right.getRight(), end));
+
+        // ritorno l'inizio e la fine
+        return Pair.of(init, end);
+    }
+
+    @Override
+    public Expression visitE_par(RegParser.E_parContext ctx) {
+        return (Expression) visit(ctx.expr());
+    }
+
+
+    /*
+    *  ESPRESSIONI ARITMETICHE
+    * */
 
     @Override
     public Expression visitNum(RegParser.NumContext ctx) {
@@ -195,35 +243,117 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         return (Expression) visit(ctx.a());
     }
 
-    @Override
-    public Expression visitE_par(RegParser.E_parContext ctx) {
-        return (Expression) visit(ctx.expr());
-    }
+
+    /*
+    *  ESPRESSIONI BOOLEANE
+    * */
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Pair<Statement, Statement> visitE_ndc(RegParser.E_ndcContext ctx) {
+    public Expression visitB_par(RegParser.B_parContext ctx) {
+        return (Expression) visit(ctx.b());
+    }
+
+
+    @Override
+    public Expression visitEq_leq_le(RegParser.Eq_leq_leContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression left = (Expression) visit(ctx.a(0));
+        Expression right = (Expression) visit(ctx.a(1));
+        switch (ctx.op.getText()) {
+            case "=":
+                return new Equal(currentCFG, loc, left, right);
+            case "<=":
+                return new LessOrEqual(currentCFG, loc, left, right);
+            case "<":
+                return new LessThan(currentCFG, loc, left, right);
+            default:
+                throw new UnsupportedOperationException("Unsupported operator " + ctx.op.getText());
+        }
+    }
+
+    // TODO
+    @Override
+    public Pair<Statement, Statement> visitCond(RegParser.CondContext ctx) {
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
 
         // nodo iniziale skip
         NoOp init = new NoOp(currentCFG, loc);
         currentCFG.addNode(init);
 
-        // visitiamo tutti e due i rami
-        Pair<Statement, Statement> left = (Pair<Statement, Statement>) visit(ctx.e(0));
-        Pair<Statement, Statement> right = (Pair<Statement, Statement>) visit(ctx.e(1));
 
-        currentCFG.addEdge(new SequentialEdge(init, left.getLeft()));
-        currentCFG.addEdge(new SequentialEdge(init, right.getLeft()));
 
-        // nodo finale join
-        NoOp end = new NoOp(currentCFG, new SourceCodeLocation(file, getLine(ctx) + 1, getCol(ctx)));
-        currentCFG.addNode(end);
-
-        currentCFG.addEdge(new SequentialEdge(left.getRight(), end));
-        currentCFG.addEdge(new SequentialEdge(right.getRight(), end));
-
-        // ritorno l'inizio e la fine
-        return Pair.of(init, end);
+        return Pair.of(init, init);
     }
+
+    // TODO
+    @Override
+    public Pair<Statement, Statement> visitKleene(RegParser.KleeneContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+
+        // Nodo iniziale della condizione
+        Expression cond = (Expression) visit(ctx.b());
+        currentCFG.addNode(cond);
+
+
+        // Si crea il corpo del ciclo
+        Statement last = cond;
+
+        for (int i = 0; i < ctx.e().size(); i++) {
+            Pair<Statement, Statement> pair = (Pair<Statement, Statement>) visit(ctx.e(i));
+            System.out.println(ctx.e(i).getText());
+            Statement entry = pair.getLeft();
+            Statement exit = pair.getRight();
+
+            // exit precedente -> entry corrente
+            currentCFG.addNode(entry);
+            currentCFG.addEdge(new SequentialEdge(last, entry));
+
+            // last è l'exit corrente
+            last = exit;
+        }
+
+        // Si collega l'ultima espressione con la condizione
+        currentCFG.addEdge(new SequentialEdge(last, cond));
+
+
+        // Nodo della condizione negata
+        SourceCodeLocation newloc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression negcond = new Not(currentCFG, newloc, cond);
+        currentCFG.addNode(negcond);
+        currentCFG.addEdge(new SequentialEdge(cond, negcond));
+
+
+        return Pair.of(cond, negcond);
+    }
+
+
+    @Override
+    public Expression visitTrue(RegParser.TrueContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        return new TrueLiteral(currentCFG, loc);
+    }
+
+    @Override
+    public Expression visitFalse(RegParser.FalseContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        return new TrueLiteral(currentCFG, loc);
+    }
+
+    @Override
+    public Expression visitAnd(RegParser.AndContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression left = (Expression) visit(ctx.b(0));
+        Expression right = (Expression) visit(ctx.b(1));
+        return new And(currentCFG, loc, left, right);
+    }
+
+    @Override
+    public Expression visitNot(RegParser.NotContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression exp = (Expression) visit(ctx.b());
+        return new Not(currentCFG, loc, exp);
+    }
+
+
+
 }
