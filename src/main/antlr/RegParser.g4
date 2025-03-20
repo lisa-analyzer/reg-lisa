@@ -20,6 +20,7 @@ e
    | NOOP # noop
    | ID ASSIGN a # assign
    | LPAR b COND SEQ e (SEQ e)* RPAR # cond
+   | LPAR b COND RPAR #assert
    | LPAR b COND SEQ e (SEQ e)* RPAR TIMES # kleene
    ;
 

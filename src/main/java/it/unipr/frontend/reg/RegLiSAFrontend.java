@@ -361,6 +361,17 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         return new Not(currentCFG, loc, exp);
     }
 
-
-
+    @Override
+    public Pair<Statement, Statement> visitAssert(RegParser.AssertContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression cond = (Expression) visit(ctx.b());
+        currentCFG.addNode(cond);
+        NoOp noop = new NoOp(currentCFG, loc);
+        currentCFG.addNode(noop);
+        currentCFG.addEdge(new TrueEdge(cond, noop));
+        Ret falseAssert = new Ret(currentCFG, new SourceCodeLocation(file, getLine(ctx) + 1, getCol(ctx)));
+        currentCFG.addNode(falseAssert);
+        currentCFG.addEdge(new FalseEdge(cond, falseAssert));
+        return Pair.of(cond, noop);
+    }
 }
