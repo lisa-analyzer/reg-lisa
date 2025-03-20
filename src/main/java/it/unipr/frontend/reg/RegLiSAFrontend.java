@@ -126,6 +126,8 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         currentCFG.addNode(eof);
         currentCFG.addEdge(new SequentialEdge(last, eof));
         currentCFG.simplify();
+        System.out.println("Nodes: " + currentCFG.getNodes());
+        System.out.println("Edges: " + currentCFG.getEdges());
 
         return program;
     }
@@ -271,59 +273,64 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         }
     }
 
-    // TODO
     @Override
     public Pair<Statement, Statement> visitCond(RegParser.CondContext ctx) {
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
-
-        // nodo iniziale skip
-        NoOp init = new NoOp(currentCFG, loc);
-        currentCFG.addNode(init);
-
-
-
-        return Pair.of(init, init);
-    }
-
-    // TODO
-    @Override
-    public Pair<Statement, Statement> visitKleene(RegParser.KleeneContext ctx) {
-        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
-
-        // Nodo iniziale della condizione
         Expression cond = (Expression) visit(ctx.b());
         currentCFG.addNode(cond);
 
+        Pair<Statement, Statement> firstPair = (Pair<Statement, Statement>) visit(ctx.e(0));
+        currentCFG.addEdge(new TrueEdge(cond, firstPair.getLeft()));
 
-        // Si crea il corpo del ciclo
-        Statement last = cond;
+        Pair<Statement, Statement> lastPair = firstPair;
 
-        for (int i = 0; i < ctx.e().size(); i++) {
+        // for loop che visita tutte le exp e le connette sequenzialmente
+        for (int i = 1; i < ctx.e().size(); i++) {
             Pair<Statement, Statement> pair = (Pair<Statement, Statement>) visit(ctx.e(i));
-            System.out.println(ctx.e(i).getText());
-            Statement entry = pair.getLeft();
-            Statement exit = pair.getRight();
-
-            // exit precedente -> entry corrente
-            currentCFG.addNode(entry);
-            currentCFG.addEdge(new SequentialEdge(last, entry));
-
-            // last è l'exit corrente
-            last = exit;
+            currentCFG.addNode(pair.getLeft());
+            currentCFG.addEdge(new SequentialEdge(lastPair.getRight(), pair.getLeft()));
+            lastPair = pair;
         }
 
-        // Si collega l'ultima espressione con la condizione
-        currentCFG.addEdge(new SequentialEdge(last, cond));
+
+        NoOp end = new NoOp(currentCFG, loc);
+        currentCFG.addNode(end);
+
+        currentCFG.addEdge(new SequentialEdge(lastPair.getRight(), end));
+        // no else
+        currentCFG.addEdge(new FalseEdge(cond, end));
+
+        return Pair.of(cond, end);
+    }
+
+    @Override
+    public Pair<Statement, Statement> visitKleene(RegParser.KleeneContext ctx) {
+        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        Expression cond = (Expression) visit(ctx.b());
+        currentCFG.addNode(cond);
+
+        Pair<Statement, Statement> firstPair = (Pair<Statement, Statement>) visit(ctx.e(0));
+        currentCFG.addEdge(new TrueEdge(cond, firstPair.getLeft()));
+
+        Pair<Statement, Statement> lastPair = firstPair;
+
+        // for loop che visita tutte le exp e le connette sequenzialmente
+        for (int i = 1; i < ctx.e().size(); i++) {
+            Pair<Statement, Statement> pair = (Pair<Statement, Statement>) visit(ctx.e(i));
+            currentCFG.addNode(pair.getLeft());
+            currentCFG.addEdge(new SequentialEdge(lastPair.getRight(), pair.getLeft()));
+            lastPair = pair;
+        }
 
 
-        // Nodo della condizione negata
-        SourceCodeLocation newloc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
-        Expression negcond = new Not(currentCFG, newloc, cond);
-        currentCFG.addNode(negcond);
-        currentCFG.addEdge(new SequentialEdge(cond, negcond));
+        NoOp end = new NoOp(currentCFG, loc);
+        currentCFG.addNode(end);
 
+        currentCFG.addEdge(new SequentialEdge(lastPair.getRight(), cond));
+        // no else
+        currentCFG.addEdge(new FalseEdge(cond, end));
 
-        return Pair.of(cond, negcond);
+        return Pair.of(cond, end);
     }
 
 

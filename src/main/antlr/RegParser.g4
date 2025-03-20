@@ -18,11 +18,9 @@ e
    : LPAR expr RPAR # e_par
    | LPAR e NON_DET_CHOICE e RPAR # e_ndc
    | NOOP # noop
-   // procediamo con l'assign e la add
    | ID ASSIGN a # assign
-   | LPAR b COND SEQ e RPAR # cond
-   // kleene lasciamola per ultima
-   | LPAR b COND SEQ (e (SEQ e)*)? RPAR TIMES # kleene
+   | LPAR b COND SEQ e (SEQ e)* RPAR # cond
+   | LPAR b COND SEQ e (SEQ e)* RPAR TIMES # kleene
    ;
 
 a
