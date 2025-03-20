@@ -12,23 +12,23 @@ import it.unive.lisa.program.language.validation.ProgramValidationLogic;
 
 public class RegLiSAFeatures extends LanguageFeatures {
 
-    @Override
-    public ParameterMatchingStrategy getMatchingStrategy() {
-        return JavaLikeMatchingStrategy.INSTANCE;
-    }
+	@Override
+	public ParameterMatchingStrategy getMatchingStrategy() {
+		return JavaLikeMatchingStrategy.INSTANCE;
+	}
 
-    @Override
-    public HierarcyTraversalStrategy getTraversalStrategy() {
-        return SingleInheritanceTraversalStrategy.INSTANCE;
-    }
+	@Override
+	public HierarcyTraversalStrategy getTraversalStrategy() {
+		return SingleInheritanceTraversalStrategy.INSTANCE;
+	}
 
-    @Override
-    public ParameterAssigningStrategy getAssigningStrategy() {
-        return PythonLikeAssigningStrategy.INSTANCE;
-    }
+	@Override
+	public ParameterAssigningStrategy getAssigningStrategy() {
+		return PythonLikeAssigningStrategy.INSTANCE;
+	}
 
-    @Override
-    public ProgramValidationLogic getProgramValidationLogic() {
-        return new BaseValidationLogic();
-    }
+	@Override
+	public ProgramValidationLogic getProgramValidationLogic() {
+		return new BaseValidationLogic();
+	}
 }
