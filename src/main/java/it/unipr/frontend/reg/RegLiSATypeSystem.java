@@ -8,6 +8,11 @@ import it.unive.lisa.type.NumericType;
 import it.unive.lisa.type.Type;
 import it.unive.lisa.type.TypeSystem;
 
+/**
+ * The type system of the RegLiSA language.
+ * This class is used to define the types used by the language.
+ * REG isn't a typed language, so the type system is very simple and not much used.
+ */
 public class RegLiSATypeSystem extends TypeSystem {
 
 	@Override

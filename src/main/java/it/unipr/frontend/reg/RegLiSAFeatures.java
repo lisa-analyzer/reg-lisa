@@ -10,6 +10,10 @@ import it.unive.lisa.program.language.resolution.ParameterMatchingStrategy;
 import it.unive.lisa.program.language.validation.BaseValidationLogic;
 import it.unive.lisa.program.language.validation.ProgramValidationLogic;
 
+/**
+ * The language features of the RegLiSA language.
+ * This class is used to define the strategies used by the language to resolve and validate programs.
+ */
 public class RegLiSAFeatures extends LanguageFeatures {
 
 	@Override
