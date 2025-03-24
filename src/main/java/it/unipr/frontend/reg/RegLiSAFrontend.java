@@ -231,15 +231,17 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      *
      * @param ctx The sequence context from the parser
      * @return A pair where:
-     * - left: the entry point statement of the first expression
-     * - right: the exit point statement of the last expression
+     * <ul>
+     *     <li>left: the entry point statement of the first expression</li>
+     *     <li>right: the exit point statement of the last expression</li>
+     * </ul>
      */
     @Override
     @SuppressWarnings("unchecked")
     public Pair<Statement, Statement> visitSeq(RegParser.SeqContext ctx) {
         // Visit the first expression in the sequence
         Pair<Statement, Statement> firstPair = (Pair<Statement, Statement>) visit(ctx.e(0));
-        log.info("First pair of the program: {}", firstPair);
+        log.info("Pair 0: {}", firstPair);
 
         Statement firstEntry = firstPair.getLeft();
         Statement last = firstPair.getRight();
