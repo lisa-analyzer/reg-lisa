@@ -179,6 +179,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * <p>
      * Grammar rule:
      * <code>program: expr EOF;</code>
+     * <p>
+     * The CFG structure is created as follows:
+     * <p>
+     * <img src="doc-files/visitProgram.jpg" alt="CFG structure for visitProgram">
      *
      * @param ctx The program context from the parser
      * @return The fully constructed LiSA Program object ready for static analysis
@@ -228,6 +232,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * <p>
      * Grammar rule:
      * <code>expr: e (SEQ e)*;</code>
+     * <p>
+     * The CFG structure is created as follows:
+     * <p>
+     * <img src="doc-files/visitSeq.jpg" alt="CFG structure for visitSeq">
      *
      * @param ctx The sequence context from the parser
      * @return A pair where:
@@ -292,7 +300,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * in the CFG.
      * <p>
      * Grammar:
-     * <code>e: NOOP</code>
+     * <code>e: NOOP</code><p>
+     * The CFG structure is created as follows:
+     * <p>
+     * <img src="doc-files/visitNoop.jpg" alt="CFG structure for visitNoop">
      *
      * @param ctx The noop context from the parser
      * @return A pair containing the NoOp node as both entry and exit points
@@ -317,7 +328,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * <p>
      * Grammar:
      * <code>e: ID ASSIGN a</code>
-     *
+     * <p>
+     * The CFG structure is created as follows:
+     * <p>
+     * <img src="doc-files/visitAssign.jpg" alt="CFG structure for visitAssign">
      * @param ctx The assignment context from the parser
      * @return A pair containing the Assignment node as both entry and exit points
      */
@@ -346,7 +360,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * <p>
      * Grammar:
      * <code>e: LPAR e NON_DET_CHOICE e RPAR</code>
-     *
+     * <p>
+     * The CFG structure is created as follows:
+     * <p>
+     * <img src="doc-files/visitNDC.jpg" alt="CFG structure for visitNDC">
      * @param ctx The non-deterministic choice context from the parser
      * @return A pair containing the entry NoOp node and the exit NoOp node
      */
@@ -414,6 +431,17 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      *     <li><code>(x < 10 ? ) ...</code> - assertion-like condition</li>
      *     <li><code>(x < 10 ? x := x + 1 ; ...)</code> - standard conditional</li>
      * </ul>
+     * <p>
+     * The CFG structure is created as follows:
+     * <p>
+     * <ul>
+     *     <li>For assertion-like conditions:
+     *     <p>
+     *     <img src="doc-files/visitCond - Assert.jpg" alt="CFG structure for visitCond (assertion-like)">
+     *     <li>For standard conditionals:
+     *     <p>
+     *     <img src="doc-files/visitCond - Classic.jpg" alt="CFG structure for visitCond (classic)">
+     * </ul>
      *
      * @param ctx The conditional expression context from the parser
      * @return A pair where:
@@ -456,7 +484,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * <p>
      * Grammar:
      * <code>e: LPAR b COND SEQ e (SEQ e)* RPAR TIMES</code>
-     *
+     * <p>
+     * The CFG structure is created as follows:
+     * <p>
+     * <img src="doc-files/visitKleene.jpg" alt="CFG structure for visitKleene">
      * @param ctx The Kleene star expression context from the parser
      * @return A pair containing the condition node as entry and the end node as exit
      */
