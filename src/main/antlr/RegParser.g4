@@ -7,35 +7,42 @@ parser grammar RegParser;
 
 options { tokenVocab = RegLexer; }
 
+// main rule, at least one expression
 program
-    : e ((SEQ | NON_DET_CHOICE) e)* EOF
-    ;
+   : expr EOF
+   ;
 
+// expression can be a sequence of expressions
+expr
+   : e (SEQ e)* # seq
+   ;
+
+// singular expression
 e
-    : LPAR e RPAR
-    | NOOP
-    | ID ASSIGN a
-    | b COND
-    | e (SEQ | NON_DET_CHOICE) e
-    | e TIMES
-    ;
+   : LPAR expr RPAR # e_par
+   | LPAR e NON_DET_CHOICE e RPAR # e_ndc
+   | NOOP # noop
+   | ID ASSIGN a # assign
+   | LPAR b COND (SEQ e (SEQ e)*)? RPAR # cond
+   | LPAR b COND SEQ e (SEQ e)* RPAR TIMES # kleene
+   ;
 
+// arithmetic expression
 a
-    : LPAR a RPAR
-    | ID
-    | NUM
-    | a PLUS a
-    | a MINUS a
-    | a TIMES a
-    ;
+   : LPAR a RPAR # a_par
+   | ID # id
+   | NUM # num
+   | a TIMES a # times
+   | a op = (PLUS | MINUS) a # plus_minus
+   ;
 
+// boolean expression
 b
-    : LPAR b RPAR
-    | TRUE
-    | FALSE
-    | a EQ a
-    | a LEQ a
-    | a LE a
-    | b AND b
-    | NOT b
-    ;
+   : LPAR b RPAR # b_par
+   | TRUE # true
+   | FALSE # false
+   | a op = (EQ | LEQ | LE) a # eq_leq_le
+   | b AND b # and
+   | NOT b # not
+   ;
+
