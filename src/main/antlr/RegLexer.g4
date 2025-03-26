@@ -20,6 +20,14 @@ NOOP
    : 'skip'
    ;
 
+TRUE
+   : 'true'
+   ;
+
+FALSE
+   : 'false'
+   ;
+
 NUM
    : [0-9]+
    ;
@@ -54,14 +62,6 @@ LEQ
 
 LE
    : '<'
-   ;
-
-TRUE
-   : 'true'
-   ;
-
-FALSE
-   : 'false'
    ;
 
 AND
