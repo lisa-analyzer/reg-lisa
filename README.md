@@ -56,10 +56,12 @@ REGLiSA is a static analyzer for programs written in the REG language, based on 
 
 ### 📜 Example
 
+This code calculates the sum of even numbers and the product of odd numbers from 0 to 9.
+
 ```reg
 n := 0;
-pari := 0;
-dispari := 1;
+even := 0;
+odd := 1;
 
 (
     n < 10 ? ;
@@ -73,11 +75,11 @@ dispari := 1;
 
         (
             (y = 0)? ;
-                pari := pari + n
+                even := even + n
         );
         (
             (y = 1) ? ;
-                dispari := dispari * n
+                odd := odd * n
         );
 
         n := n + 1
