@@ -46,3 +46,9 @@ java -jar build/libs/reg-lisa.jar reglisa-testcases/runtime.reg
 There's already a run configuration in the project for IntelliJ IDEA, which can be used to run the analyzer on a `.reg` file.
 By default, it runs the `runtime.reg` file, but this can be changed in the run configuration.
 The same is true for the tests, which can be run using the run configuration for JUnit.
+
+## Contributors
+
+<a href="https://github.com/lisa-analyzer/reg-lisa/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=lisa-analyzer/reg-lisa" />
+</a>
