@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Main" type="Application" factoryName="Application" nameIsGenerated="true">
+  <configuration default="false" name="Run Frontend" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="it.unipr.frontend.Main" />
     <module name="reg-lisa.main" />
     <option name="PROGRAM_PARAMETERS" value="reglisa-testcases/runtime.reg" />
