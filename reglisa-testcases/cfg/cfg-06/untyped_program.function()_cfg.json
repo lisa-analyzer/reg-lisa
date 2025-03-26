@@ -24,7 +24,7 @@
                 4,
                 5
             ],
-            "text": "y = 2"
+            "text": "y = 0"
         },
         {
             "id": 4,
@@ -32,43 +32,22 @@
         },
         {
             "id": 5,
-            "text": "2"
+            "text": "0"
         },
         {
             "id": 6,
-            "subNodes": [
-                7,
-                8
-            ],
-            "text": "z = 3"
-        },
-        {
-            "id": 7,
-            "text": "z"
-        },
-        {
-            "id": 8,
-            "text": "3"
-        },
-        {
-            "id": 9,
             "text": "ret"
         }
     ],
     "edges": [
         {
             "sourceId": 0,
-            "destId": 3,
+            "destId": 6,
             "kind": "SequentialEdge"
         },
         {
             "sourceId": 3,
             "destId": 6,
-            "kind": "SequentialEdge"
-        },
-        {
-            "sourceId": 6,
-            "destId": 9,
             "kind": "SequentialEdge"
         }
     ],

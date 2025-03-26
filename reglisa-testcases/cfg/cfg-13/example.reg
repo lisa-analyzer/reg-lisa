@@ -1,0 +1,27 @@
+n := 0;
+pari := 0;
+dispari := 1;
+skip;
+
+(
+    n < 10 ? ;
+    (
+        y := n;
+
+        (
+            !(y <= 1)? ;
+                y := y - 2
+        )* ;
+
+        (
+            (y = 0)? ;
+                pari := pari + n
+        );
+        (
+            (y = 1) ? ;
+                dispari := dispari * n
+        );
+
+        n := n + 1
+    )
+)*

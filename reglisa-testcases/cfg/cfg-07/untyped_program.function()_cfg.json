@@ -8,7 +8,7 @@
                 1,
                 2
             ],
-            "text": "x = 1"
+            "text": "x = 0"
         },
         {
             "id": 1,
@@ -16,7 +16,7 @@
         },
         {
             "id": 2,
-            "text": "1"
+            "text": "0"
         },
         {
             "id": 3,
@@ -24,15 +24,15 @@
                 4,
                 5
             ],
-            "text": "y = 2"
+            "text": "==(x, 0)"
         },
         {
             "id": 4,
-            "text": "y"
+            "text": "x"
         },
         {
             "id": 5,
-            "text": "2"
+            "text": "0"
         },
         {
             "id": 6,
@@ -40,18 +40,34 @@
                 7,
                 8
             ],
-            "text": "z = 3"
+            "text": "y = 2"
         },
         {
             "id": 7,
-            "text": "z"
+            "text": "y"
         },
         {
             "id": 8,
-            "text": "3"
+            "text": "2"
         },
         {
             "id": 9,
+            "subNodes": [
+                10,
+                11
+            ],
+            "text": "z = 3"
+        },
+        {
+            "id": 10,
+            "text": "z"
+        },
+        {
+            "id": 11,
+            "text": "3"
+        },
+        {
+            "id": 12,
             "text": "ret"
         }
     ],
@@ -64,11 +80,21 @@
         {
             "sourceId": 3,
             "destId": 6,
-            "kind": "SequentialEdge"
+            "kind": "TrueEdge"
+        },
+        {
+            "sourceId": 3,
+            "destId": 9,
+            "kind": "FalseEdge"
         },
         {
             "sourceId": 6,
             "destId": 9,
+            "kind": "SequentialEdge"
+        },
+        {
+            "sourceId": 9,
+            "destId": 12,
             "kind": "SequentialEdge"
         }
     ],

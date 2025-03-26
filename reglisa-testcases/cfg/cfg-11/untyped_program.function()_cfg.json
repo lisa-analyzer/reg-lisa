@@ -1,0 +1,12 @@
+{
+    "name": "untyped program::function()",
+    "description": null,
+    "nodes": [
+        {
+            "id": 0,
+            "text": "ret"
+        }
+    ],
+    "edges": [],
+    "descriptions": []
+}

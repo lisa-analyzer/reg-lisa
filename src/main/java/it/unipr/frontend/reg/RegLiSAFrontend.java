@@ -461,7 +461,9 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         currentCFG.addNode(cond);
 
         // Handle the case where there's no then branch (assertion-like)
+        System.out.println("Expression: " + ctx.e());
         if (ctx.e().isEmpty()) {
+            System.out.println("Semo qua");
             NoOp noop = new NoOp(currentCFG, loc);
             currentCFG.addNode(noop);
             currentCFG.addEdge(new TrueEdge(cond, noop));

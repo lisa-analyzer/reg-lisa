@@ -8,7 +8,7 @@
                 1,
                 2
             ],
-            "text": "x = 1"
+            "text": "x = 0"
         },
         {
             "id": 1,
@@ -16,42 +16,46 @@
         },
         {
             "id": 2,
-            "text": "1"
+            "text": "0"
         },
         {
             "id": 3,
+            "text": "false"
+        },
+        {
+            "id": 4,
             "subNodes": [
-                4,
-                5
+                5,
+                6
             ],
             "text": "y = 2"
         },
         {
-            "id": 4,
+            "id": 5,
             "text": "y"
         },
         {
-            "id": 5,
+            "id": 6,
             "text": "2"
         },
         {
-            "id": 6,
+            "id": 7,
             "subNodes": [
-                7,
-                8
+                8,
+                9
             ],
             "text": "z = 3"
         },
         {
-            "id": 7,
+            "id": 8,
             "text": "z"
         },
         {
-            "id": 8,
+            "id": 9,
             "text": "3"
         },
         {
-            "id": 9,
+            "id": 10,
             "text": "ret"
         }
     ],
@@ -63,12 +67,22 @@
         },
         {
             "sourceId": 3,
-            "destId": 6,
+            "destId": 4,
+            "kind": "TrueEdge"
+        },
+        {
+            "sourceId": 3,
+            "destId": 7,
+            "kind": "FalseEdge"
+        },
+        {
+            "sourceId": 4,
+            "destId": 7,
             "kind": "SequentialEdge"
         },
         {
-            "sourceId": 6,
-            "destId": 9,
+            "sourceId": 7,
+            "destId": 10,
             "kind": "SequentialEdge"
         }
     ],
