@@ -136,7 +136,7 @@ task spotlessErrorMessage {
     }
 }
 // class containing main method
-mainClassName = 'it.unipr.EVMLiSA'
+mainClassName = 'it.unipr.frontend.Main'
 
 tasks.register('checkCodeStyle') {
     group = 'verification'
