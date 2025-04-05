@@ -131,8 +131,7 @@ java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-s] [-h] [-v
 java -jar build/libs/reg-lisa.jar -a -f reglisa-testcases/runtime.reg -g HTML -o reglisa-outputs
 ```
 
-There's already a run configuration in the project for IntelliJ IDEA, which can be used to run the analyzer on a `.reg` file.
-By default, it runs the `runtime.reg` file, but this can be changed in the run configuration.
+There's already a run configuration in the project for IntelliJ IDEA and, by default, it runs the program with the default values.
 The same is true for the tests, which can be run using the run configuration for JUnit.
 
 ## Contributors
