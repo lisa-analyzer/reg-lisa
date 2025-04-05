@@ -15,25 +15,25 @@ import it.unive.lisa.type.TypeSystem;
  */
 public class RegLiSATypeSystem extends TypeSystem {
 
-	@Override
-	public BooleanType getBooleanType() {
-		return BoolType.INSTANCE;
-	}
+    @Override
+    public BooleanType getBooleanType() {
+        return BoolType.INSTANCE;
+    }
 
-	@Override
-	public StringType getStringType() {
-		return StringType.INSTANCE;
-	}
+    @Override
+    public StringType getStringType() {
+        return StringType.INSTANCE;
+    }
 
-	@Override
-	public NumericType getIntegerType() {
-		return Int32Type.INSTANCE;
-	}
+    @Override
+    public NumericType getIntegerType() {
+        return Int32Type.INSTANCE;
+    }
 
-	@Override
-	public boolean canBeReferenced(
-			Type type) {
-		return type.isInMemoryType();
-	}
+    @Override
+    public boolean canBeReferenced(
+            Type type) {
+        return type.isInMemoryType();
+    }
 
 }

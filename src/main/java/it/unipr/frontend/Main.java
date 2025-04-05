@@ -16,15 +16,14 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
-
 public class Main {
     // public since it is used in the Frontend
     public static boolean simplifyCFG = true;
+
     private static final Logger log = LogManager.getLogger(Main.class);
 
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         Options options = getOptions();
 
         CommandLineParser parser = new DefaultParser();
@@ -89,7 +88,11 @@ public class Main {
             lisa.run(program);
         } catch (ParseException e) {
             System.err.println("Parsing failed: " + e.getMessage());
-            formatter.printHelp("reglisa", options);
+            formatter.printHelp("java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-r] [-h] [-v]", options);
+        } catch (Exception e) {
+            log.error("Unexpected error: {}", e.getMessage());
+        } finally {
+            log.info("Execution finished.");
         }
     }
 
