@@ -91,16 +91,17 @@ odd := 1;
 
 ## Requirements
 
-- Java 11 or higher
-- Gradle 8.0 or higher
+The building process has been tested **only** in the following environment:
+- Java 11
+- Gradle 6.8
 
 To build the analyzer:
 
 ```bash
-./gradlew assemble
+./gradlew build
 ```
 
-This produces a JAR file in `build/libs`.
+This produces a fat JAR file in `build/libs`.
 
 ---
 
@@ -109,15 +110,25 @@ This produces a JAR file in `build/libs`.
 The analyzer is executed via command line, passing the `.reg` file as the only argument:
 
 ```bash
-java -jar build/libs/reg-lisa.jar path/to/file.reg
+java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-s] [-h] [-v]
 ```
+
+### Arguments
+
+- `-a`, `--analysis`  Enable analysis (default: disabled)
+- `-f`, `--file <arg>`  Input `.reg` file (default: `reglisa-testcases/runtime.reg`)
+- `-g`, `--graph <arg>`  Graph type: DOT or HTML (default: HTML)
+- `-h`, `--help`  Print help
+- `-o`, `--output <arg>`  Output directory (default: `reglisa-outputs`)
+- `s`, `--simplify`  Simplify CFG (default: true)
+- `-v`, `--version`  Print version
 
 ---
 
 ## Example
 
 ```bash
-java -jar build/libs/reg-lisa.jar reglisa-testcases/runtime.reg
+java -jar build/libs/reg-lisa.jar -a -f reglisa-testcases/runtime.reg -g HTML -o reglisa-outputs
 ```
 
 There's already a run configuration in the project for IntelliJ IDEA, which can be used to run the analyzer on a `.reg` file.

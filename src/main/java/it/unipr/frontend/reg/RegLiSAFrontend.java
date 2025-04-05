@@ -1,5 +1,6 @@
 package it.unipr.frontend.reg;
 
+import it.unipr.frontend.Main;
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
@@ -61,6 +62,7 @@ import static it.unipr.frontend.reg.Antlr4Utils.getLine;
  *   <li>Expressions are translated to their corresponding LiSA statement types</li>
  * </ul>
  * <p>
+ *
  * @see it.unipr.reg.antlr.RegParser
  * @see it.unipr.reg.antlr.RegLexer
  */
@@ -206,8 +208,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         currentCFG.addNode(eof);
         currentCFG.addEdge(new SequentialEdge(lastExit, eof));
 
-        // Simplify the CFG by eliminating redundant nodes and edges. I.e., NoOp nodes
-        currentCFG.simplify();
+        if (Main.simplifyCFG)
+            // Simplify the CFG by eliminating redundant nodes and edges. I.e., NoOp nodes
+            currentCFG.simplify();
+
         log.info("Nodes: {}", currentCFG.getNodes());
         log.info("Edges: {}", currentCFG.getEdges());
 
@@ -332,6 +336,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * The CFG structure is created as follows:
      * <p>
      * <img src="doc-files/visitAssign.jpg" alt="CFG structure for visitAssign">
+     *
      * @param ctx The assignment context from the parser
      * @return A pair containing the Assignment node as both entry and exit points
      */
@@ -364,6 +369,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * The CFG structure is created as follows:
      * <p>
      * <img src="doc-files/visitNDC.jpg" alt="CFG structure for visitNDC">
+     *
      * @param ctx The non-deterministic choice context from the parser
      * @return A pair containing the entry NoOp node and the exit NoOp node
      */
@@ -436,10 +442,10 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * <p>
      * <ul>
      *     <li>For assertion-like conditions:
-     *     <p>
+     * <p>
      *     <img src="doc-files/visitCond - Assert.jpg" alt="CFG structure for visitCond (assertion-like)">
      *     <li>For standard conditionals:
-     *     <p>
+     * <p>
      *     <img src="doc-files/visitCond - Classic.jpg" alt="CFG structure for visitCond (classic)">
      * </ul>
      *
@@ -490,6 +496,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * The CFG structure is created as follows:
      * <p>
      * <img src="doc-files/visitKleene.jpg" alt="CFG structure for visitKleene">
+     *
      * @param ctx The Kleene star expression context from the parser
      * @return A pair containing the condition node as entry and the end node as exit
      */

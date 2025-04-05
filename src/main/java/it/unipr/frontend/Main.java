@@ -12,34 +12,97 @@ import it.unive.lisa.conf.LiSAConfiguration;
 import it.unive.lisa.interprocedural.ModularWorstCaseAnalysis;
 import it.unive.lisa.interprocedural.callgraph.RTACallGraph;
 import it.unive.lisa.program.Program;
+import org.apache.commons.cli.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 
 public class Main {
+    // public since it is used in the Frontend
+    public static boolean simplifyCFG = true;
+    private static final Logger log = LogManager.getLogger(Main.class);
+
 
     public static void main(String[] args) throws IOException {
-        String file = args[0];
-        System.out.println("File: " + file);
+        Options options = getOptions();
 
-        Program program = RegLiSAFrontend.processFile(args[0]);
-        LiSAConfiguration conf = new LiSAConfiguration();
-        conf.workdir = "reglisa-outputs";
-        conf.analysisGraphs = LiSAConfiguration.GraphType.DOT;
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setWidth(120);
+        formatter.setLeftPadding(4);
+        CommandLine cmd;
 
-        conf.abstractState = new SimpleAbstractState<>(
-                new MonolithicHeap(),
-                new ValueEnvironment<>(new Interval()),
-                new TypeEnvironment<>(new InferredTypes())
-        );
+        try {
+            cmd = parser.parse(options, args);
 
-        conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
-        conf.callGraph = new RTACallGraph();
-        conf.serializeResults = true;
-        conf.optimize = false;
-        conf.jsonOutput = true;
+            if (cmd.hasOption("h")) {
+                formatter.printHelp("java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-r] [-h] [-v]", options);
+                return;
+            }
 
-        LiSA lisa = new LiSA(conf);
-        lisa.run(program);
+            if (cmd.hasOption("v")) {
+                System.out.println("RegLiSA version 1.0.0");
+                return;
+            }
+
+            String file = cmd.getOptionValue("file", "reglisa-testcases/runtime.reg");
+            boolean analysis = cmd.hasOption("analysis");
+            String graph = cmd.getOptionValue("graph", "HTML").toUpperCase();
+            String outputDir = cmd.getOptionValue("output", "reglisa-outputs");
+
+            if (cmd.hasOption("raw-cfg")) {
+                simplifyCFG = false;
+            }
+
+            log.info("Running RegLiSA with the following options:");
+            log.info("\tFile: {}", file);
+            log.info("\tAnalysis: {}", analysis ? "enabled" : "disabled");
+            log.info("\tGraph type: {}", graph);
+            log.info("\tOutput dir: {}", outputDir);
+            log.info("\tSimplify CFG: {}", simplifyCFG);
+
+            LiSAConfiguration conf = new LiSAConfiguration();
+
+            conf.workdir = outputDir;
+            conf.serializeResults = true;
+            conf.serializeInputs = true;
+            conf.jsonOutput = true;
+            conf.analysisGraphs = graph.equals("DOT")
+                    ? LiSAConfiguration.GraphType.DOT
+                    : LiSAConfiguration.GraphType.HTML;
+
+            if (analysis) {
+                conf.abstractState = new SimpleAbstractState<>(
+                        new MonolithicHeap(),
+                        new ValueEnvironment<>(new Interval()),
+                        new TypeEnvironment<>(new InferredTypes())
+                );
+                conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
+                conf.callGraph = new RTACallGraph();
+                conf.optimize = false;
+            } else
+                log.info("Analysis is disabled. Creating only the control flow graph.");
+
+            LiSA lisa = new LiSA(conf);
+            Program program = RegLiSAFrontend.processFile(file);
+            lisa.run(program);
+        } catch (ParseException e) {
+            System.err.println("Parsing failed: " + e.getMessage());
+            formatter.printHelp("reglisa", options);
+        }
     }
 
+    private static Options getOptions() {
+        Options options = new Options();
+
+        options.addOption("f", "file", true, "Input .reg file (default: reglisa-testcases/runtime.reg)");
+        options.addOption("a", "analysis", false, "Enable analysis (default: disabled)");
+        options.addOption("g", "graph", true, "Graph type: DOT or HTML (default: HTML)");
+        options.addOption("o", "output", true, "Output directory (default: reglisa-outputs)");
+        options.addOption("r", "raw-cfg", false, "Don't simplify CFG (default: false)");
+        options.addOption("h", "help", false, "Print help");
+        options.addOption("v", "version", false, "Print version");
+        return options;
+    }
 }

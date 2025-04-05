@@ -13,8 +13,20 @@ plugins {
     id 'antlr'
     id 'eclipse'    
     id 'com.diffplug.spotless' version '6.18.0'
-    id 'checkstyle' 
+    id 'checkstyle'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Disattiva il jar standard
+tasks.named('jar').configure {
+    enabled = false
+}
+
 
 repositories {
     // Use JCenter for resolving dependencies.
@@ -143,3 +155,11 @@ tasks.register('checkCodeStyle') {
     description = 'Execute spotless and checkstyle to ensure code and javadoc formatting'
     dependsOn 'spotlessCheck', 'checkstyleMain', 'checkstyleTest'
 }
+
+shadowJar {
+    manifest {
+        attributes 'Main-Class': 'it.unipr.frontend.Main'
+    }
+}
+
+build.dependsOn shadowJar
