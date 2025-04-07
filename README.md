@@ -120,7 +120,7 @@ java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-s] [-h] [-v
 - `-g`, `--graph <arg>`  Graph type: DOT or HTML (default: HTML)
 - `-h`, `--help`  Print help
 - `-o`, `--output <arg>`  Output directory (default: `reglisa-outputs`)
-- `s`, `--simplify`  Simplify CFG (default: true)
+- `r`, `--raw-cfg`  Don't simplify CFG (default: false)
 - `-v`, `--version`  Print version
 
 ---
