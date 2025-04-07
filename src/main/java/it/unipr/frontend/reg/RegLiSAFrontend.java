@@ -214,6 +214,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 
         log.info("Nodes: {}", currentCFG.getNodes());
         log.info("Edges: {}", currentCFG.getEdges());
+        log.info("Variables: {}", descriptor.getVariables());
 
         return program;
     }
@@ -329,6 +330,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
     /**
      * Visits an assignment expression and creates a corresponding Assignment node
      * in the CFG.
+     * If the variable is not declared yet, it adds it to the descriptor.
      * <p>
      * Grammar:
      * <code>e: ID ASSIGN a</code>
@@ -353,9 +355,19 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         // Create the assignment statement
         Assignment assign = new Assignment(currentCFG, loc, target, exp);
         currentCFG.addNode(assign);
-        log.info("Assign {} at {}", assign, loc);
 
-        // Return the assignment as both entry and exit points
+        // If the variable already exists, we just need to assign it
+        for (VariableTableEntry entry : descriptor.getVariables())
+            if (entry.getName().equals(ctx.ID().getText())) {
+                log.info("Assigning to existing variable {}", entry);
+                return Pair.of(assign, assign);
+            }
+
+        // If it's a new variable, we need to add it to the descriptor
+        descriptor.addVariable(new VariableTableEntry(loc, 0, ctx.ID().getText()));
+
+        log.info("Assign new {} at {}", assign, loc);
+
         return Pair.of(assign, assign);
     }
 
@@ -533,26 +545,25 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
     }
 
     /**
-     * Visits an identifier reference and creates a corresponding VariableRef node.
-     * Also adds the variable to the descriptor's variable table.
+     * Visit an identifier and create a reference to the corresponding variable.
      * <p>
      * Grammar:
      * <code>a: ID</code>
      *
      * @param ctx The identifier context from the parser
      * @return The VariableRef expression
+     * @throws IllegalStateException If the variable is not declared
      */
     @Override
     public Expression visitId(RegParser.IdContext ctx) {
-        SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+        // If the variable is in the declaration list, we reference it
+        for (VariableTableEntry entry : descriptor.getVariables())
+            if (entry.getName().equals(ctx.ID().getText())) {
+                log.info("Referencing existing variable {}", entry);
+                return entry.createReference(currentCFG);
+            }
 
-        // Register the variable in the variable table
-        descriptor.addVariable(new VariableTableEntry(loc, 0, ctx.ID().getText()));
-
-        // Create the variable reference
-        VariableRef var = new VariableRef(currentCFG, loc, ctx.ID().getText());
-        log.info("Created variable {}", var);
-        return var;
+        throw new IllegalStateException("Variable " + ctx.ID().getText() + " not declared");
     }
 
     /**
