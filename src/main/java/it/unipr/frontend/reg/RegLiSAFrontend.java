@@ -7,6 +7,7 @@ import it.unipr.reg.antlr.RegParserBaseVisitor;
 import it.unive.lisa.program.ClassUnit;
 import it.unive.lisa.program.Program;
 import it.unive.lisa.program.SourceCodeLocation;
+import it.unive.lisa.program.annotations.Annotation;
 import it.unive.lisa.program.cfg.CFG;
 import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import it.unive.lisa.program.cfg.VariableTableEntry;
@@ -344,6 +345,8 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      */
     @Override
     public Pair<Statement, Statement> visitAssign(RegParser.AssignContext ctx) {
+
+        // TODO: here the descriptor is updated but in while loops, it breaks
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
 
         // Create a variable reference for the target (left side of assignment)
@@ -560,7 +563,8 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         for (VariableTableEntry entry : descriptor.getVariables())
             if (entry.getName().equals(ctx.ID().getText())) {
                 log.info("Referencing existing variable {}", entry);
-                return entry.createReference(currentCFG);
+                // TODO: here we return a new VariableRef or a reference from the descriptor?
+                return new VariableRef(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)), ctx.ID().getText());
             }
 
         throw new IllegalStateException("Variable " + ctx.ID().getText() + " not declared");
