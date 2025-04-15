@@ -77,9 +77,11 @@ public class Main {
                         new ValueEnvironment<>(new Interval()),
                         new TypeEnvironment<>(new InferredTypes())
                 );
+
+                conf.useWideningPoints = false;
+                conf.optimize = false;
                 conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
                 conf.callGraph = new RTACallGraph();
-                conf.optimize = false;
             } else
                 log.info("Analysis is disabled. Creating only the control flow graph.");
 
