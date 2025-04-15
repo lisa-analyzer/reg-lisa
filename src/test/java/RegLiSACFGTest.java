@@ -4,6 +4,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
 public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
     @SuppressWarnings("SameParameterValue")
     private static CronConfiguration createConfiguration(String subDir, boolean generateCfg) {
@@ -95,5 +98,15 @@ public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
     public void testCFG13() throws AnalysisSetupException, IOException {
         CronConfiguration conf = createConfiguration("cfg-13", false);
         perform(conf);
+    }
+
+    @Test
+    public void testCFG14() throws AnalysisSetupException {
+        CronConfiguration conf = createConfiguration("cfg-14", false);
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> perform(conf));
+        String expectedMessage = "Variable x not declared";
+        String actualMessage = exception.getMessage();
+
+        assertTrue(actualMessage.contains(expectedMessage));
     }
 }
