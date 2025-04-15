@@ -7,7 +7,6 @@ import it.unipr.reg.antlr.RegParserBaseVisitor;
 import it.unive.lisa.program.ClassUnit;
 import it.unive.lisa.program.Program;
 import it.unive.lisa.program.SourceCodeLocation;
-import it.unive.lisa.program.annotations.Annotation;
 import it.unive.lisa.program.cfg.CFG;
 import it.unive.lisa.program.cfg.CodeMemberDescriptor;
 import it.unive.lisa.program.cfg.VariableTableEntry;
@@ -346,7 +345,6 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
     @Override
     public Pair<Statement, Statement> visitAssign(RegParser.AssignContext ctx) {
 
-        // TODO: here the descriptor is updated but in while loops, it breaks
         SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
 
         // Create a variable reference for the target (left side of assignment)
@@ -367,9 +365,8 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
             }
 
         // If it's a new variable, we need to add it to the descriptor
-        descriptor.addVariable(new VariableTableEntry(loc, 0, ctx.ID().getText()));
-
         log.info("Assign new {} at {}", assign, loc);
+        descriptor.addVariable(new VariableTableEntry(loc, 0, ctx.ID().getText()));
 
         return Pair.of(assign, assign);
     }
@@ -558,13 +555,12 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * @throws IllegalStateException If the variable is not declared
      */
     @Override
-    public Expression visitId(RegParser.IdContext ctx) {
+    public Expression visitId(RegParser.IdContext ctx) throws IllegalStateException {
         // If the variable is in the declaration list, we reference it
         for (VariableTableEntry entry : descriptor.getVariables())
             if (entry.getName().equals(ctx.ID().getText())) {
                 log.info("Referencing existing variable {}", entry);
-                // TODO: here we return a new VariableRef or a reference from the descriptor?
-                return new VariableRef(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)), ctx.ID().getText());
+                return entry.createReference(currentCFG);
             }
 
         throw new IllegalStateException("Variable " + ctx.ID().getText() + " not declared");
