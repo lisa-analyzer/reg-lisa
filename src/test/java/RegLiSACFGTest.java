@@ -109,4 +109,10 @@ public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
 
         assertTrue(actualMessage.contains(expectedMessage));
     }
+
+    @Test
+    public void testCFG15() throws AnalysisSetupException, IOException {
+        CronConfiguration conf = createConfiguration("cfg-15", false);
+        perform(conf);
+    }
 }
