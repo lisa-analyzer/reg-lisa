@@ -1,6 +1,5 @@
 package it.unipr.frontend.reg;
 
-import it.unipr.frontend.Main;
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
@@ -212,9 +211,8 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         currentCFG.addNode(eof);
         currentCFG.addEdge(new SequentialEdge(lastExit, eof));
 
-        if (Main.simplifyCFG)
-            // Simplify the CFG by eliminating redundant nodes and edges. I.e., NoOp nodes
-            currentCFG.simplify();
+        // Simplify the CFG by eliminating NoOp nodes
+        currentCFG.simplify();
 
         log.info("Nodes: {}", currentCFG.getNodes());
         log.info("Edges: {}", currentCFG.getEdges());
@@ -499,7 +497,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         }
 
         // Process the conditional block
-        return processConditionalBlock(ctx, cond, loc, false);
+        return processConditionalBlock(ctx, cond, loc);
     }
 
     /**
@@ -525,7 +523,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
         currentCFG.addNode(cond);
 
         // Process the loop body
-        return processConditionalBlock(ctx, cond, loc, true);
+        return processConditionalBlock(ctx, cond, loc);
     }
 
     // endregion
@@ -759,28 +757,26 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * Helper method to process a conditional block from a Cond context.
      * Delegates to the generic processBlock method.
      *
-     * @param ctx      The conditional expression context
-     * @param cond     The condition expression node
-     * @param loc      The source code location
-     * @param isKleene True if this is a Kleene star (loop), false otherwise
+     * @param ctx  The conditional expression context
+     * @param cond The condition expression node
+     * @param loc  The source code location
      * @return A pair containing the condition node as entry and the end node as exit
      */
-    private Pair<Statement, Statement> processConditionalBlock(RegParser.CondContext ctx, Expression cond, SourceCodeLocation loc, boolean isKleene) {
-        return processBlock(ctx.e(), cond, loc, isKleene);
+    private Pair<Statement, Statement> processConditionalBlock(RegParser.CondContext ctx, Expression cond, SourceCodeLocation loc) {
+        return processBlock(ctx.e(), cond, loc, false);
     }
 
     /**
      * Helper method to process a conditional block from a Kleene context.
      * Delegates to the generic processBlock method.
      *
-     * @param ctx      The Kleene star expression context
-     * @param cond     The condition expression node
-     * @param loc      The source code location
-     * @param isKleene True if this is a Kleene star (loop), false otherwise
+     * @param ctx  The Kleene star expression context
+     * @param cond The condition expression node
+     * @param loc  The source code location
      * @return A pair containing the condition node as entry and the end node as exit
      */
-    private Pair<Statement, Statement> processConditionalBlock(RegParser.KleeneContext ctx, Expression cond, SourceCodeLocation loc, boolean isKleene) {
-        return processBlock(ctx.e(), cond, loc, isKleene);
+    private Pair<Statement, Statement> processConditionalBlock(RegParser.KleeneContext ctx, Expression cond, SourceCodeLocation loc) {
+        return processBlock(ctx.e(), cond, loc, true);
     }
 
     /**

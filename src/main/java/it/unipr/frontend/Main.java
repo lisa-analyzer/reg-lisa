@@ -17,11 +17,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class Main {
-    // public since it is used in the Frontend
-    public static boolean simplifyCFG = true;
-
     private static final Logger log = LogManager.getLogger(Main.class);
-
 
     public static void main(String[] args) {
         Options options = getOptions();
@@ -50,16 +46,11 @@ public class Main {
             String graph = cmd.getOptionValue("graph", "HTML").toUpperCase();
             String outputDir = cmd.getOptionValue("output", "reglisa-outputs");
 
-            if (cmd.hasOption("raw-cfg")) {
-                simplifyCFG = false;
-            }
-
             log.info("Running RegLiSA with the following options:");
             log.info("\tFile: {}", file);
             log.info("\tAnalysis: {}", analysis ? "enabled" : "disabled");
             log.info("\tGraph type: {}", graph);
             log.info("\tOutput dir: {}", outputDir);
-            log.info("\tSimplify CFG: {}", simplifyCFG);
 
             LiSAConfiguration conf = new LiSAConfiguration();
 
@@ -106,7 +97,6 @@ public class Main {
         options.addOption("a", "analysis", false, "Enable analysis (default: disabled)");
         options.addOption("g", "graph", true, "Graph type: DOT or HTML (default: HTML)");
         options.addOption("o", "output", true, "Output directory (default: reglisa-outputs)");
-        options.addOption("r", "raw-cfg", false, "Don't simplify CFG (default: false)");
         options.addOption("h", "help", false, "Print help");
         options.addOption("v", "version", false, "Print version");
         return options;
