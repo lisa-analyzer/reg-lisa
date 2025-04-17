@@ -65,6 +65,10 @@ import static it.unipr.frontend.reg.Antlr4Utils.getLine;
  *
  * @see it.unipr.reg.antlr.RegParser
  * @see it.unipr.reg.antlr.RegLexer
+ * 
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
+ * @author <a href="mailto:francesco.marastoni_02@studenti.univr.it">Francesco Marastoni</a>
+ * @author <a href="mailto:amos.loverde@studenti.univr.it">Amos Lo Verde</a>
  */
 public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 
@@ -761,7 +765,6 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * @param isKleene True if this is a Kleene star (loop), false otherwise
      * @return A pair containing the condition node as entry and the end node as exit
      */
-    @SuppressWarnings("SameParameterValue")
     private Pair<Statement, Statement> processConditionalBlock(RegParser.CondContext ctx, Expression cond, SourceCodeLocation loc, boolean isKleene) {
         return processBlock(ctx.e(), cond, loc, isKleene);
     }
@@ -776,7 +779,6 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
      * @param isKleene True if this is a Kleene star (loop), false otherwise
      * @return A pair containing the condition node as entry and the end node as exit
      */
-    @SuppressWarnings("SameParameterValue")
     private Pair<Statement, Statement> processConditionalBlock(RegParser.KleeneContext ctx, Expression cond, SourceCodeLocation loc, boolean isKleene) {
         return processBlock(ctx.e(), cond, loc, isKleene);
     }
