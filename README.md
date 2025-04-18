@@ -110,7 +110,7 @@ This produces a fat JAR file in `build/libs`.
 The analyzer is executed via command line, passing the `.reg` file as the only argument:
 
 ```bash
-java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-s] [-h] [-v]
+java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-h] [-v]
 ```
 
 ### Arguments
