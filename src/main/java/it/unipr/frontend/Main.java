@@ -32,7 +32,7 @@ public class Main {
             cmd = parser.parse(options, args);
 
             if (cmd.hasOption("h")) {
-                formatter.printHelp("java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-r] [-h] [-v]", options);
+                formatter.printHelp("java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-h] [-v]", options);
                 return;
             }
 
@@ -82,7 +82,7 @@ public class Main {
             lisa.run(program);
         } catch (ParseException e) {
             System.err.println("Parsing failed: " + e.getMessage());
-            formatter.printHelp("java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-r] [-h] [-v]", options);
+            formatter.printHelp("java -jar reg-lisa-all.jar [-a] [-f <file>] [-g <type>] [-o <dir>] [-h] [-v]", options);
         } catch (Exception e) {
             log.error("Unexpected error: {}", e.getMessage());
         } finally {
