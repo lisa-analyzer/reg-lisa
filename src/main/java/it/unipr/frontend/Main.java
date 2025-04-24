@@ -69,7 +69,8 @@ public class Main {
                         new TypeEnvironment<>(new InferredTypes())
                 );
 
-                // disabling useWideningPoints, the widening is applied in all points of the program
+                // by disabling useWideningPoints
+                // the widening is applied in all points of the program
                 conf.useWideningPoints = false;
                 conf.optimize = false;
                 conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
