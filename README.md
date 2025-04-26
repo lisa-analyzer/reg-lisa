@@ -2,7 +2,7 @@
 
 # REGLiSA: a static analyzer for the REG language
 
-REGLiSA is a static analyzer for programs written in the REG language, based on [LiSA](https://github.com/lisa-analyzer/lisa/). It builds the control flow graph of a `.reg` program and performs abstract interpretation-based static analysis over it. The REG language is inspired by the _regular commands_, whose syntax and semantics can be found in the following papers:
+REGLiSA is a static analyzer for programs written in the REG language, based on [LiSA](https://github.com/lisa-analyzer/lisa/). It builds the control flow graph of a `.reg` program and performs abstract interpretation-based static analysis over it. The REG language is inspired by _regular commands_, whose syntax and semantics are described in the following papers:
 
 > Peter W. O'Hearn: Incorrectness logic. POPL 2020. 10:1-10:32
 
