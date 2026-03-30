@@ -8,8 +8,8 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
-    @SuppressWarnings("SameParameterValue")
-    private static CronConfiguration createConfiguration(String subDir, boolean generateCfg) {
+
+	private static CronConfiguration createConfiguration(String subDir, boolean generateCfg) {
         CronConfiguration conf = new CronConfiguration();
         conf.testDir = "cfg";
         conf.testSubDir = subDir;
