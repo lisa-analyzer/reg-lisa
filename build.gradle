@@ -15,12 +15,7 @@ plugins {
     id 'com.diffplug.spotless' version '6.18.0'
     id 'checkstyle'
     // for fat jar
-    id 'com.github.johnrengelman.shadow' version '6.1.0'
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 // Disattiva il jar standard
