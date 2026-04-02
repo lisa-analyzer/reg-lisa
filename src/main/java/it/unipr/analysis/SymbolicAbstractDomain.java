@@ -13,6 +13,7 @@ import it.unive.lisa.analysis.value.ValueDomain;
 import it.unive.lisa.program.SyntheticLocation;
 import it.unive.lisa.program.cfg.ProgramPoint;
 import it.unive.lisa.symbolic.SymbolicExpression;
+import it.unive.lisa.symbolic.value.BinaryExpression;
 import it.unive.lisa.symbolic.value.Constant;
 import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.ValueExpression;
@@ -57,6 +58,10 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			return this.symbolicState.getState((Identifier) expr).elements.stream().findAny().get();
 		else if (expr instanceof Constant)
 			return expr;
+		else if (expr instanceof BinaryExpression) {
+			BinaryExpression bin = (BinaryExpression) expr;
+			
+		}
 		return expr;
 	}
 	

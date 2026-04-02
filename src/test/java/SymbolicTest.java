@@ -33,7 +33,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 
 	@Test
 	public void testSymbolic() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test", false);
+		CronConfiguration conf = createConfiguration("test", true);
 		perform(conf);
 	}
 }
