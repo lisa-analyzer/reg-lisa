@@ -19,7 +19,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		conf.testDir = "symbolic";
 		conf.testSubDir = subDir;
 		conf.programFile = "example.reg";
-		conf.serializeInputs = true;
+		conf.serializeInputs = false;
 		conf.jsonOutput = true;
 		conf.abstractState = new SimpleAbstractState<>(new MonolithicHeap(), new SymbolicAbstractDomain(), new TypeEnvironment<>(new InferredTypes()));
 		if (generateCfg)
@@ -33,7 +33,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 
 	@Test
 	public void testSymbolic() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test", true);
+		CronConfiguration conf = createConfiguration("test", false);
 		perform(conf);
 	}
 }
