@@ -17,6 +17,11 @@ import it.unive.lisa.symbolic.value.BinaryExpression;
 import it.unive.lisa.symbolic.value.Constant;
 import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.ValueExpression;
+import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
+import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingAdd;
+import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingDiv;
+import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingMul;
+import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingSub;
 import it.unive.lisa.type.Untyped;
 import it.unive.lisa.util.representation.StringRepresentation;
 import it.unive.lisa.util.representation.StructuredRepresentation;
@@ -60,7 +65,25 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			return expr;
 		else if (expr instanceof BinaryExpression) {
 			BinaryExpression bin = (BinaryExpression) expr;
+			SymbolicExpression left = eval(bin.getLeft());
+			SymbolicExpression right = eval(bin.getRight());
 			
+			if (left instanceof Constant && right instanceof Constant) {
+				BinaryOperator op = bin.getOperator();
+				Integer leftConst = (Integer) ((Constant) left).getValue();
+				Integer rightConst = (Integer) ((Constant) right).getValue();
+				
+				if (op == NumericNonOverflowingAdd.INSTANCE)
+					return new Constant(Untyped.INSTANCE, leftConst + rightConst, SyntheticLocation.INSTANCE);
+				else if (op == NumericNonOverflowingSub.INSTANCE)
+					return new Constant(Untyped.INSTANCE, leftConst - rightConst, SyntheticLocation.INSTANCE);
+				else if (op == NumericNonOverflowingMul.INSTANCE)
+					return new Constant(Untyped.INSTANCE, leftConst * rightConst, SyntheticLocation.INSTANCE);
+				else if (op == NumericNonOverflowingDiv.INSTANCE)
+					return new Constant(Untyped.INSTANCE, leftConst / rightConst, SyntheticLocation.INSTANCE);
+				else
+					return bin;
+			}
 		}
 		return expr;
 	}
