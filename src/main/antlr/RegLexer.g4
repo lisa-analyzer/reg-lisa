@@ -29,7 +29,7 @@ FALSE
    ;
 
 NUM
-   : '-' ? [0-9]+
+   : '-'? [0-9]+
    ;
 
 ID
@@ -78,6 +78,10 @@ LPAR
 
 RPAR
    : ')'
+   ;
+
+INPUT
+   : 'input' LPAR RPAR
    ;
 
 WS

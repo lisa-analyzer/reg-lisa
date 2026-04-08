@@ -1,7 +1,24 @@
 package it.unipr.frontend.reg;
 
+import static it.unipr.frontend.reg.Antlr4Utils.getCol;
+import static it.unipr.frontend.reg.Antlr4Utils.getLine;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import it.unipr.cfg.InputExpression;
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
+import it.unipr.reg.antlr.RegParser.InputContext;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
 import it.unive.lisa.program.ClassUnit;
 import it.unive.lisa.program.Program;
@@ -12,7 +29,12 @@ import it.unive.lisa.program.cfg.VariableTableEntry;
 import it.unive.lisa.program.cfg.edge.FalseEdge;
 import it.unive.lisa.program.cfg.edge.SequentialEdge;
 import it.unive.lisa.program.cfg.edge.TrueEdge;
-import it.unive.lisa.program.cfg.statement.*;
+import it.unive.lisa.program.cfg.statement.Assignment;
+import it.unive.lisa.program.cfg.statement.Expression;
+import it.unive.lisa.program.cfg.statement.NoOp;
+import it.unive.lisa.program.cfg.statement.Ret;
+import it.unive.lisa.program.cfg.statement.Statement;
+import it.unive.lisa.program.cfg.statement.VariableRef;
 import it.unive.lisa.program.cfg.statement.comparison.Equal;
 import it.unive.lisa.program.cfg.statement.comparison.LessOrEqual;
 import it.unive.lisa.program.cfg.statement.comparison.LessThan;
@@ -24,20 +46,6 @@ import it.unive.lisa.program.cfg.statement.logic.Not;
 import it.unive.lisa.program.cfg.statement.numeric.Addition;
 import it.unive.lisa.program.cfg.statement.numeric.Multiplication;
 import it.unive.lisa.program.cfg.statement.numeric.Subtraction;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
-import static it.unipr.frontend.reg.Antlr4Utils.getCol;
-import static it.unipr.frontend.reg.Antlr4Utils.getLine;
 
 /**
  * Frontend class for translating REG language programs into LiSA's Control Flow
@@ -595,6 +603,11 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
             default:
                 throw new UnsupportedOperationException("Unsupported operator " + ctx.op.getText());
         }
+    }
+    
+    @Override
+    public Object visitInput(InputContext ctx) {
+    	return new InputExpression(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)));
     }
 
     /**
