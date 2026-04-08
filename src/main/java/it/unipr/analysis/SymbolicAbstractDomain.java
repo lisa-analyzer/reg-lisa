@@ -16,6 +16,7 @@ import it.unive.lisa.symbolic.SymbolicExpression;
 import it.unive.lisa.symbolic.value.BinaryExpression;
 import it.unive.lisa.symbolic.value.Constant;
 import it.unive.lisa.symbolic.value.Identifier;
+import it.unive.lisa.symbolic.value.PushAny;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingAdd;
@@ -29,7 +30,6 @@ import it.unive.lisa.util.representation.StructuredRepresentation;
 public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomain> {
 	
 	private static final Constant TRUE = new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE);
-	
 	
 	private final SymbolicExpression pathCondition;
 	private final GenericMapLattice<Identifier, ExpressionSet> symbolicState;
@@ -61,7 +61,10 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	public SymbolicExpression eval(SymbolicExpression expr) {
 		if (expr instanceof Identifier)
 			return this.symbolicState.getState((Identifier) expr).elements.stream().findAny().get();
-		else if (expr instanceof Constant)
+		else if (expr instanceof PushAny) {
+			// TODO: handle push any (e.g., generate a new symbolic variable)
+			return expr;
+		} else if (expr instanceof Constant)
 			return expr;
 		else if (expr instanceof BinaryExpression) {
 			BinaryExpression bin = (BinaryExpression) expr;
@@ -83,6 +86,8 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 					return new Constant(Untyped.INSTANCE, leftConst / rightConst, SyntheticLocation.INSTANCE);
 				else
 					return bin;
+			} else {
+				// TODO: handle more cases (e.g., other operators, non-constant operands)
 			}
 		}
 		return expr;
