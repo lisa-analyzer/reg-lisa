@@ -64,6 +64,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		else if (expr instanceof Constant)
 			return expr;
 		else if (expr instanceof BinaryExpression) {
+
 			BinaryExpression bin = (BinaryExpression) expr;
 			SymbolicExpression left = eval(bin.getLeft());
 			SymbolicExpression right = eval(bin.getRight());
