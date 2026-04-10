@@ -62,8 +62,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		if (expr instanceof Identifier)
 			return this.symbolicState.getState((Identifier) expr).elements.stream().findAny().get();
 		else if (expr instanceof PushAny) {
-			// TODO: handle push any (e.g., generate a new symbolic variable)
-			return expr;
+			return new SymbolicVariable(expr.getStaticType(), expr.getCodeLocation().toString(), expr.getCodeLocation());
 		} else if (expr instanceof Constant)
 			return expr;
 		else if (expr instanceof BinaryExpression) {
@@ -88,7 +87,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 				else
 					return bin;
 			} else {
-				// TODO: handle more cases (e.g., other operators, non-constant operands)
+				return new BinaryExpression(bin.getStaticType(), left, right, bin.getOperator(), bin.getCodeLocation());
 			}
 		}
 		return expr;
