@@ -1,7 +1,14 @@
 package it.unipr.analysis;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
+
+import org.antlr.v4.parse.ANTLRParser.elementOptions_return;
 
 import it.unive.lisa.analysis.ScopeToken;
 import it.unive.lisa.analysis.SemanticException;
@@ -57,6 +64,115 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		return this;
 	}
 	
+	private Constant knownTerm(SymbolicExpression expr, Integer defaultValue) {
+		/*
+		 * This method attempts to compute a known value for a binary expression
+		 * by recursively evaluating its operands.
+		 * Only sum and difference are handled for now.
+		 */
+
+		BinaryExpression bin = (BinaryExpression) expr;
+		SymbolicExpression left = bin.getLeft();
+		SymbolicExpression right = bin.getRight();
+		BinaryOperator op = bin.getOperator();
+		//for sum and difference 
+		//const op const -> op and return
+		//const op var -> op with default value and recall
+		//var op const -> op with default value and recall
+		//var op var -> recall for both and combine results
+		if (op == NumericNonOverflowingAdd.INSTANCE) {
+			if(left instanceof Constant && right instanceof Constant)
+				return new Constant(Untyped.INSTANCE, (Integer) ((Constant) left).getValue() + (Integer) ((Constant) right).getValue(), SyntheticLocation.INSTANCE);
+			else if (left instanceof Constant)
+				return knownTerm(right, (Integer) ((Constant) left).getValue() + defaultValue);
+			else if (right instanceof Constant)
+				return knownTerm(left, (Integer) ((Constant) right).getValue() + defaultValue);
+			else
+				return new Constant(Untyped.INSTANCE, (Integer) knownTerm(left, defaultValue).getValue() + (Integer) knownTerm(right, defaultValue).getValue(), SyntheticLocation.INSTANCE);
+		}
+		if (op == NumericNonOverflowingSub.INSTANCE) {
+			if(left instanceof Constant && right instanceof Constant)
+				return new Constant(Untyped.INSTANCE, (Integer) ((Constant) left).getValue() - (Integer) ((Constant) right).getValue(), SyntheticLocation.INSTANCE);
+			else if (left instanceof Constant)
+				return knownTerm(right, defaultValue - (Integer) ((Constant) left).getValue());
+			else if (right instanceof Constant)
+				return knownTerm(left, defaultValue - (Integer) ((Constant) right).getValue());
+			else
+				return new Constant(Untyped.INSTANCE, (Integer) knownTerm(left, defaultValue).getValue() - (Integer) knownTerm(right, defaultValue).getValue(), SyntheticLocation.INSTANCE);
+		}
+		return null;
+	}
+
+	private void getVariables(SymbolicExpression expr, List<SymbolicVariable> variables, List<Constant> coeffs) {
+
+		/* This method attempts to extract variables and their coefficients from a binary expression */
+
+		BinaryExpression bin = (BinaryExpression) expr;
+		SymbolicExpression left = bin.getLeft();
+		SymbolicExpression right = bin.getRight();
+		BinaryOperator op = bin.getOperator();
+
+		//
+		if (left instanceof Constant && right instanceof SymbolicVariable) {
+			Integer idx=variables.indexOf(right);
+			if(idx==-1){
+				variables.add((SymbolicVariable) right);
+				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
+			}
+			else{
+				if (op == NumericNonOverflowingAdd.INSTANCE)
+					coeffs.set(idx, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idx)).getValue()) + 1, SyntheticLocation.INSTANCE));
+				else if (op == NumericNonOverflowingSub.INSTANCE)
+					coeffs.set(idx, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idx)).getValue()) - 1, SyntheticLocation.INSTANCE));
+				else if (op == NumericNonOverflowingMul.INSTANCE)
+					coeffs.set(idx, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idx)).getValue()) + ((Integer) ((Constant) left).getValue()), SyntheticLocation.INSTANCE));
+			}
+			return;
+			
+		} 
+		else if (left instanceof SymbolicVariable && right instanceof Constant) {
+			Integer idx=variables.indexOf(right);
+			if(idx==-1){
+				variables.add((SymbolicVariable) left);
+				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
+			}
+			//TO DO: add and sub: how do i know the variable coefficient?
+			else if (op == NumericNonOverflowingMul.INSTANCE)
+				coeffs.set(idx, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idx)).getValue()) * ((Integer) ((Constant) right).getValue()), SyntheticLocation.INSTANCE));
+			else if (op == NumericNonOverflowingDiv.INSTANCE) {
+				coeffs.set(idx, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idx)).getValue()) / ((Integer) ((Constant) right).getValue()), SyntheticLocation.INSTANCE));
+			}
+			return;
+		} 
+		else if (left instanceof SymbolicVariable && right instanceof SymbolicVariable) {
+			
+			Integer idxLeft=variables.indexOf(left);
+			Integer idxRight=variables.indexOf(right);
+
+			if(idxLeft==-1){
+				variables.add((SymbolicVariable) left);
+				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
+			}
+
+			//TODO: add and sub: how do i know the left variable coefficient?
+
+			if(idxRight==-1){
+				variables.add((SymbolicVariable) right);
+				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
+			}
+			else{
+				if (op == NumericNonOverflowingAdd.INSTANCE)
+					coeffs.set(idxRight, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idxRight)).getValue()) + 1, SyntheticLocation.INSTANCE));
+				else if (op == NumericNonOverflowingSub.INSTANCE)
+					coeffs.set(idxRight, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idxRight)).getValue()) - 1, SyntheticLocation.INSTANCE));
+			}
+			return;
+		}
+		else {
+			getVariables(left, variables, coeffs);
+			getVariables(right, variables, coeffs);	
+		}
+	}
 	
 	public SymbolicExpression eval(SymbolicExpression expr) {
 		if (expr instanceof Identifier)
@@ -86,8 +202,20 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 					return new Constant(Untyped.INSTANCE, leftConst / rightConst, SyntheticLocation.INSTANCE);
 				else
 					return bin;
-			} else {
-				return new BinaryExpression(bin.getStaticType(), left, right, bin.getOperator(), bin.getCodeLocation());
+			} 
+			else {
+				//coeffs*variables + known term
+				List<SymbolicVariable> variables = new ArrayList<>();
+				List<Constant> coeffs = new ArrayList<>();
+				Constant known = knownTerm(expr, 0);
+				getVariables(expr, variables, coeffs);
+				BinaryExpression newBin = new BinaryExpression(bin.getStaticType(), (SymbolicExpression) ((Constant) coeffs.get(0)), variables.get(0), NumericNonOverflowingMul.INSTANCE, bin.getCodeLocation());
+				for (int i = 1; i<variables.size(); i++) {
+					BinaryExpression newBinTemp=new BinaryExpression(bin.getStaticType(), (SymbolicExpression) ((Constant) coeffs.get(i)), variables.get(i), NumericNonOverflowingMul.INSTANCE, bin.getCodeLocation());
+					newBin = new BinaryExpression(bin.getStaticType(), newBin, newBinTemp, NumericNonOverflowingAdd.INSTANCE, bin.getCodeLocation());
+				}
+
+				return new BinaryExpression(bin.getStaticType(), newBin, (SymbolicExpression) known, NumericNonOverflowingAdd.INSTANCE, bin.getCodeLocation());
 			}
 		}
 		return expr;
