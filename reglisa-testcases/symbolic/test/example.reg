@@ -1,4 +1,5 @@
 x := input();
 y := 2;
 z := 3;
-w := z + x
+w := z + x;
+w := w + z

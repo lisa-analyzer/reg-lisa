@@ -21,12 +21,16 @@ import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingAdd;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingDiv;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingMul;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingSub;
+import it.unive.lisa.type.Type;
 import it.unive.lisa.type.Untyped;
 import it.unive.lisa.util.representation.StringRepresentation;
 import it.unive.lisa.util.representation.StructuredRepresentation;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomain> {
@@ -61,198 +65,248 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	}
 
 	/**
-	 * This method attempts to compute a known value for a binary expression by
-	 * recursively evaluating its operands.
-	 * 
-	 * @param expr         the expression to evaluate
-	 * @param defaultValue the default value to use when an operand is a
-	 *                         variable (initially 0)
-	 * 
-	 * @return a Constant representing the known value of the expression, or
-	 *             null if it cannot be determined
+	 * Represents a linear combination of symbolic variables and an integer
+	 * constant: c1*x1 + c2*x2 + ... + cn*xn + k.
+	 *
+	 * <p>Zero-coefficient entries are never stored in the map.
 	 */
-	private Constant knownTerm(SymbolicExpression expr, Integer defaultValue) {
-		if (expr instanceof Variable)
-			// TODO: do something
-			return null;
-		else if (expr instanceof Constant) {
-			// TODO: do something
-			return null;
-		} else if (expr instanceof BinaryExpression) {
-			BinaryExpression bin = (BinaryExpression) expr;
-			SymbolicExpression left = bin.getLeft();
-			SymbolicExpression right = bin.getRight();
-			BinaryOperator op = bin.getOperator();
-			// for sum and difference
-			// const op const -> op and return
-			// const op var -> op with default value and recall
-			// var op const -> op with default value and recall
-			// var op var -> recall for both and combine results
-			if (op == NumericNonOverflowingAdd.INSTANCE) {
-				if (left instanceof Constant && right instanceof Constant)
-					return new Constant(Untyped.INSTANCE,
-							(Integer) ((Constant) left).getValue() + (Integer) ((Constant) right).getValue(),
-							SyntheticLocation.INSTANCE);
-				else if (left instanceof Constant)
-					return knownTerm(right, (Integer) ((Constant) left).getValue() + defaultValue);
-				else if (right instanceof Constant)
-					return knownTerm(left, (Integer) ((Constant) right).getValue() + defaultValue);
-				else
-					return new Constant(Untyped.INSTANCE, (Integer) knownTerm(left, defaultValue).getValue()
-							+ (Integer) knownTerm(right, defaultValue).getValue(), SyntheticLocation.INSTANCE);
+	private static final class LinearCombination {
+
+		/** Maps each variable to its non-zero integer coefficient. */
+		final Map<Variable, Integer> coefficients;
+
+		/** The integer constant term. */
+		final int constantTerm;
+
+		private LinearCombination(Map<Variable, Integer> coefficients, int constantTerm) {
+			this.coefficients = coefficients;
+			this.constantTerm = constantTerm;
+		}
+
+		static LinearCombination ofConstant(int k) {
+			return new LinearCombination(new LinkedHashMap<>(), k);
+		}
+
+		static LinearCombination ofVariable(Variable v) {
+			Map<Variable, Integer> m = new LinkedHashMap<>();
+			m.put(v, 1);
+			return new LinearCombination(m, 0);
+		}
+
+		/** True when there are no variable terms (pure constant). */
+		boolean isConstant() {
+			return coefficients.isEmpty();
+		}
+
+		/** Returns a new LinearCombination equal to {@code this + other}. */
+		LinearCombination add(LinearCombination other) {
+			Map<Variable, Integer> merged = new LinkedHashMap<>(this.coefficients);
+			for (Map.Entry<Variable, Integer> e : other.coefficients.entrySet())
+				merged.merge(e.getKey(), e.getValue(), Integer::sum);
+			merged.entrySet().removeIf(e -> e.getValue() == 0);
+			return new LinearCombination(merged, this.constantTerm + other.constantTerm);
+		}
+
+		/** Returns a new LinearCombination equal to {@code this - other}. */
+		LinearCombination sub(LinearCombination other) {
+			Map<Variable, Integer> merged = new LinkedHashMap<>(this.coefficients);
+			for (Map.Entry<Variable, Integer> e : other.coefficients.entrySet())
+				merged.merge(e.getKey(), -e.getValue(), Integer::sum);
+			merged.entrySet().removeIf(e -> e.getValue() == 0);
+			return new LinearCombination(merged, this.constantTerm - other.constantTerm);
+		}
+
+		/** Returns a new LinearCombination equal to {@code this * factor}. */
+		LinearCombination scale(int factor) {
+			if (factor == 0)
+				return ofConstant(0);
+			Map<Variable, Integer> scaled = new LinkedHashMap<>();
+			for (Map.Entry<Variable, Integer> e : this.coefficients.entrySet())
+				scaled.put(e.getKey(), e.getValue() * factor);
+			return new LinearCombination(scaled, this.constantTerm * factor);
+		}
+
+		/**
+		 * Returns a new LinearCombination equal to {@code this / divisor}
+		 * using integer (truncating) division on each coefficient.
+		 */
+		LinearCombination divideBy(int divisor) {
+			Map<Variable, Integer> divided = new LinkedHashMap<>();
+			for (Map.Entry<Variable, Integer> e : this.coefficients.entrySet()) {
+				int newCoeff = e.getValue() / divisor;
+				if (newCoeff != 0)
+					divided.put(e.getKey(), newCoeff);
 			}
-			if (op == NumericNonOverflowingSub.INSTANCE) {
-				if (left instanceof Constant && right instanceof Constant)
-					return new Constant(Untyped.INSTANCE,
-							(Integer) ((Constant) left).getValue() - (Integer) ((Constant) right).getValue(),
-							SyntheticLocation.INSTANCE);
-				else if (left instanceof Constant)
-					return knownTerm(right, defaultValue - (Integer) ((Constant) left).getValue());
-				else if (right instanceof Constant)
-					return knownTerm(left, defaultValue - (Integer) ((Constant) right).getValue());
-				else
-					return new Constant(Untyped.INSTANCE, (Integer) knownTerm(left, defaultValue).getValue()
-							- (Integer) knownTerm(right, defaultValue).getValue(), SyntheticLocation.INSTANCE);
+			return new LinearCombination(divided, this.constantTerm / divisor);
+		}
+
+		/**
+		 * Reconstructs a canonical {@link SymbolicExpression} tree from this
+		 * linear combination.
+		 *
+		 * <ul>
+		 * <li>Coefficient 1: emit the variable directly (no multiplication).
+		 * <li>Coefficient &gt; 1: emit {@code coeff * var}.
+		 * <li>Coefficient -1: emit as subtraction {@code result - var}.
+		 * <li>Coefficient &lt; -1: emit as subtraction {@code result - (|coeff| * var)}.
+		 * <li>Constant term appended last via addition (positive) or
+		 *     subtraction (negative).
+		 * </ul>
+		 */
+		SymbolicExpression toExpression(Type type, it.unive.lisa.program.cfg.CodeLocation loc) {
+			List<Map.Entry<Variable, Integer>> entries = new ArrayList<>(coefficients.entrySet());
+
+			if (entries.isEmpty())
+				return new Constant(Untyped.INSTANCE, constantTerm, SyntheticLocation.INSTANCE);
+
+			// Build the first term
+			SymbolicExpression result = buildTerm(entries.get(0).getKey(), entries.get(0).getValue(), type, loc);
+
+			// Chain remaining variable terms
+			for (int i = 1; i < entries.size(); i++) {
+				Variable var = entries.get(i).getKey();
+				int coeff = entries.get(i).getValue();
+				if (coeff > 0) {
+					SymbolicExpression term = buildTerm(var, coeff, type, loc);
+					result = new BinaryExpression(type, result, term, NumericNonOverflowingAdd.INSTANCE, loc);
+				} else {
+					// Negative coefficient: subtract the positive-magnitude term
+					SymbolicExpression term = buildTerm(var, -coeff, type, loc);
+					result = new BinaryExpression(type, result, term, NumericNonOverflowingSub.INSTANCE, loc);
+				}
 			}
 
-			return null;
-		} else {
-			// TODO: what to do with other expressions?
-			return null;
+			// Append the constant term
+			if (constantTerm > 0) {
+				Constant k = new Constant(Untyped.INSTANCE, constantTerm, SyntheticLocation.INSTANCE);
+				result = new BinaryExpression(type, result, k, NumericNonOverflowingAdd.INSTANCE, loc);
+			} else if (constantTerm < 0) {
+				Constant k = new Constant(Untyped.INSTANCE, -constantTerm, SyntheticLocation.INSTANCE);
+				result = new BinaryExpression(type, result, k, NumericNonOverflowingSub.INSTANCE, loc);
+			}
+
+			return result;
+		}
+
+		/**
+		 * Builds a single term {@code coeff * var}, collapsing to just
+		 * {@code var} when {@code coeff == 1}.
+		 * Caller is responsible for passing a positive (absolute) coefficient.
+		 */
+		private SymbolicExpression buildTerm(Variable var, int coeff,
+				Type type, it.unive.lisa.program.cfg.CodeLocation loc) {
+			if (coeff == 1)
+				return var;
+			Constant c = new Constant(Untyped.INSTANCE, coeff, SyntheticLocation.INSTANCE);
+			return new BinaryExpression(type, c, var, NumericNonOverflowingMul.INSTANCE, loc);
 		}
 	}
 
 	/**
-	 * This method attempts to extract variables and their coefficients from a
-	 * binary expression.
-	 * 
-	 * @param expr      the expression to analyze
-	 * @param variables the list of variables found (initially empty)
-	 * @param coeffs    the list of coefficients corresponding to the variables
-	 *                      (initially empty)
+	 * Tries to reduce {@code expr} to a {@link LinearCombination}.
+	 *
+	 * <p>Returns {@link Optional#empty()} for non-linear sub-expressions
+	 * (e.g. {@code x * y}), in which case the caller falls back to returning
+	 * the expression unchanged.
+	 *
+	 * <p>This method expects a fully evaluated expression tree whose leaves are
+	 * either {@link Constant} or {@link Variable} (including
+	 * {@link SymbolicVariable}). It must not be called with unresolved
+	 * {@link Identifier} or {@link PushAny} nodes.
 	 */
-	private void getVariables(SymbolicExpression expr, List<SymbolicVariable> variables, List<Constant> coeffs) {
-		BinaryExpression bin = (BinaryExpression) expr;
-		SymbolicExpression left = bin.getLeft();
-		SymbolicExpression right = bin.getRight();
-		BinaryOperator op = bin.getOperator();
+	private Optional<LinearCombination> toLinearCombination(SymbolicExpression expr) {
+		if (expr instanceof Constant)
+			return Optional.of(LinearCombination.ofConstant((Integer) ((Constant) expr).getValue()));
 
-		//
-		if (left instanceof Constant && right instanceof SymbolicVariable) {
-			Integer idx = variables.indexOf(right);
-			if (idx == -1) {
-				variables.add((SymbolicVariable) right);
-				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
-			} else {
-				if (op == NumericNonOverflowingAdd.INSTANCE)
-					coeffs.set(idx, new Constant(Untyped.INSTANCE,
-							((Integer) ((Constant) coeffs.get(idx)).getValue()) + 1, SyntheticLocation.INSTANCE));
-				else if (op == NumericNonOverflowingSub.INSTANCE)
-					coeffs.set(idx, new Constant(Untyped.INSTANCE,
-							((Integer) ((Constant) coeffs.get(idx)).getValue()) - 1, SyntheticLocation.INSTANCE));
-				else if (op == NumericNonOverflowingMul.INSTANCE)
-					coeffs.set(idx, new Constant(Untyped.INSTANCE, ((Integer) ((Constant) coeffs.get(idx)).getValue())
-							+ ((Integer) ((Constant) left).getValue()), SyntheticLocation.INSTANCE));
-			}
-			return;
+		if (expr instanceof Variable)
+			return Optional.of(LinearCombination.ofVariable((Variable) expr));
 
-		} else if (left instanceof SymbolicVariable && right instanceof Constant) {
-			Integer idx = variables.indexOf(right);
-			if (idx == -1) {
-				variables.add((SymbolicVariable) left);
-				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
-			}
-			// TO DO: add and sub: how do i know the variable coefficient?
-			else if (op == NumericNonOverflowingMul.INSTANCE)
-				coeffs.set(idx, new Constant(Untyped.INSTANCE,
-						((Integer) ((Constant) coeffs.get(idx)).getValue()) * ((Integer) ((Constant) right).getValue()),
-						SyntheticLocation.INSTANCE));
-			else if (op == NumericNonOverflowingDiv.INSTANCE) {
-				coeffs.set(idx, new Constant(Untyped.INSTANCE,
-						((Integer) ((Constant) coeffs.get(idx)).getValue()) / ((Integer) ((Constant) right).getValue()),
-						SyntheticLocation.INSTANCE));
-			}
-			return;
-		} else if (left instanceof SymbolicVariable && right instanceof SymbolicVariable) {
+		if (expr instanceof BinaryExpression) {
+			BinaryExpression bin = (BinaryExpression) expr;
+			Optional<LinearCombination> left = toLinearCombination(bin.getLeft());
+			Optional<LinearCombination> right = toLinearCombination(bin.getRight());
 
-			Integer idxLeft = variables.indexOf(left);
-			Integer idxRight = variables.indexOf(right);
+			if (left.isEmpty() || right.isEmpty())
+				return Optional.empty();
 
-			if (idxLeft == -1) {
-				variables.add((SymbolicVariable) left);
-				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
+			BinaryOperator op = bin.getOperator();
+			LinearCombination l = left.get();
+			LinearCombination r = right.get();
+
+			if (op == NumericNonOverflowingAdd.INSTANCE)
+				return Optional.of(l.add(r));
+
+			if (op == NumericNonOverflowingSub.INSTANCE)
+				return Optional.of(l.sub(r));
+
+			if (op == NumericNonOverflowingMul.INSTANCE) {
+				if (l.isConstant())
+					return Optional.of(r.scale(l.constantTerm));
+				if (r.isConstant())
+					return Optional.of(l.scale(r.constantTerm));
+				// Non-linear (variable * variable): give up
+				return Optional.empty();
 			}
 
-			// TODO: add and sub: how do i know the left variable coefficient?
-
-			if (idxRight == -1) {
-				variables.add((SymbolicVariable) right);
-				coeffs.add(new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE));
-			} else {
-				if (op == NumericNonOverflowingAdd.INSTANCE)
-					coeffs.set(idxRight, new Constant(Untyped.INSTANCE,
-							((Integer) ((Constant) coeffs.get(idxRight)).getValue()) + 1, SyntheticLocation.INSTANCE));
-				else if (op == NumericNonOverflowingSub.INSTANCE)
-					coeffs.set(idxRight, new Constant(Untyped.INSTANCE,
-							((Integer) ((Constant) coeffs.get(idxRight)).getValue()) - 1, SyntheticLocation.INSTANCE));
+			if (op == NumericNonOverflowingDiv.INSTANCE) {
+				if (r.isConstant() && r.constantTerm != 0)
+					return Optional.of(l.divideBy(r.constantTerm));
+				// Division by zero or by a non-constant: give up
+				return Optional.empty();
 			}
-			return;
-		} else {
-			getVariables(left, variables, coeffs);
-			getVariables(right, variables, coeffs);
 		}
+
+		return Optional.empty();
 	}
 
-	public SymbolicExpression eval(SymbolicExpression expr) {
-		if (expr instanceof Identifier)
-			return this.symbolicState.getState((Identifier) expr).elements.stream().findAny().get();
-		else if (expr instanceof PushAny) {
-			return new SymbolicVariable(expr.getStaticType(), expr.getCodeLocation().toString(),
-					expr.getCodeLocation());
-		} else if (expr instanceof Constant)
-			return expr;
-		else if (expr instanceof BinaryExpression) {
+	/**
+	 * Simplifies a fully evaluated symbolic expression to its canonical linear
+	 * form. Falls back to returning the expression unchanged when it is
+	 * non-linear.
+	 */
+	private SymbolicExpression simplify(SymbolicExpression expr) {
+		return toLinearCombination(expr)
+				.map(lc -> lc.toExpression(expr.getStaticType(), expr.getCodeLocation()))
+				.orElse(expr);
+	}
 
+	/**
+	 * Evaluates a symbolic expression by:
+	 * <ol>
+	 * <li>Resolving {@link Identifier} references from the symbolic state.
+	 * <li>Creating fresh {@link SymbolicVariable}s for {@link PushAny} inputs.
+	 * <li>Recursively evaluating {@link BinaryExpression} children, then
+	 *     simplifying the result to canonical linear form via
+	 *     {@link #simplify(SymbolicExpression)}.
+	 * </ol>
+	 */
+	public SymbolicExpression eval(SymbolicExpression expr) {
+		if (expr instanceof Identifier) {
+			ExpressionSet set = this.symbolicState.getState((Identifier) expr);
+			if (set == null || set.elements.isEmpty())
+				return expr;
+			return set.elements.stream().findAny().get();
+		}
+
+		if (expr instanceof PushAny)
+			return new SymbolicVariable(expr.getStaticType(),
+					expr.getCodeLocation().toString(), expr.getCodeLocation());
+
+		if (expr instanceof Constant)
+			return expr;
+
+		if (expr instanceof BinaryExpression) {
 			BinaryExpression bin = (BinaryExpression) expr;
+			// Recursively evaluate children so all identifiers/PushAny are resolved
 			SymbolicExpression left = eval(bin.getLeft());
 			SymbolicExpression right = eval(bin.getRight());
-
-			if (left instanceof Constant && right instanceof Constant) {
-				BinaryOperator op = bin.getOperator();
-				Integer leftConst = (Integer) ((Constant) left).getValue();
-				Integer rightConst = (Integer) ((Constant) right).getValue();
-
-				if (op == NumericNonOverflowingAdd.INSTANCE)
-					return new Constant(Untyped.INSTANCE, leftConst + rightConst, SyntheticLocation.INSTANCE);
-				else if (op == NumericNonOverflowingSub.INSTANCE)
-					return new Constant(Untyped.INSTANCE, leftConst - rightConst, SyntheticLocation.INSTANCE);
-				else if (op == NumericNonOverflowingMul.INSTANCE)
-					return new Constant(Untyped.INSTANCE, leftConst * rightConst, SyntheticLocation.INSTANCE);
-				else if (op == NumericNonOverflowingDiv.INSTANCE)
-					return new Constant(Untyped.INSTANCE, leftConst / rightConst, SyntheticLocation.INSTANCE);
-				else
-					return bin;
-			} else {
-				// coeffs*variables + known term
-				List<SymbolicVariable> variables = new ArrayList<>();
-				List<Constant> coeffs = new ArrayList<>();
-				Constant known = knownTerm(expr, 0);
-				getVariables(expr, variables, coeffs);
-				BinaryExpression newBin = new BinaryExpression(bin.getStaticType(),
-						(SymbolicExpression) ((Constant) coeffs.get(0)), variables.get(0),
-						NumericNonOverflowingMul.INSTANCE, bin.getCodeLocation());
-				for (int i = 1; i < variables.size(); i++) {
-					BinaryExpression newBinTemp = new BinaryExpression(bin.getStaticType(),
-							(SymbolicExpression) ((Constant) coeffs.get(i)), variables.get(i),
-							NumericNonOverflowingMul.INSTANCE, bin.getCodeLocation());
-					newBin = new BinaryExpression(bin.getStaticType(), newBin, newBinTemp,
-							NumericNonOverflowingAdd.INSTANCE, bin.getCodeLocation());
-				}
-
-				return new BinaryExpression(bin.getStaticType(), newBin, (SymbolicExpression) known,
-						NumericNonOverflowingAdd.INSTANCE, bin.getCodeLocation());
-			}
+			// Rebuild the tree with evaluated leaves, then simplify
+			BinaryExpression evaluated = new BinaryExpression(
+					bin.getStaticType(), left, right,
+					bin.getOperator(), bin.getCodeLocation());
+			return simplify(evaluated);
 		}
+
 		return expr;
 	}
 
