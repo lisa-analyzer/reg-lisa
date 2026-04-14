@@ -7,21 +7,21 @@ import it.unive.lisa.type.Type;
 
 public class SymbolicVariable extends Variable {
 
-    protected SymbolicVariable(
+	protected SymbolicVariable(
 			Type staticType,
 			String name,
 			CodeLocation location) {
 		super(staticType, name, new Annotations(), location);
-    }
-	
-    @Override
-    public boolean canBeScoped() {
-        return true;
-    }
+	}
 
-    @Override
-    public String toString() {
-        return super.toString() + "_sym";
-    }
+	@Override
+	public boolean canBeScoped() {
+		return true;
+	}
+
+	@Override
+	public String toString() {
+		return super.toString() + "_sym";
+	}
 
 }

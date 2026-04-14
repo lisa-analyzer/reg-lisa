@@ -1,21 +1,9 @@
 
-
 import static java.nio.file.Files.copy;
 import static java.nio.file.Files.createDirectories;
 import static java.nio.file.Files.delete;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Objects;
 
 import it.unipr.frontend.reg.RegLiSAFrontend;
 import it.unive.lisa.AnalysisException;
@@ -30,6 +18,16 @@ import it.unive.lisa.outputs.compare.JsonReportComparer.REPORT_TYPE;
 import it.unive.lisa.outputs.json.JsonReport;
 import it.unive.lisa.program.Program;
 import it.unive.lisa.util.file.FileManager;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Objects;
 
 public abstract class RegLiSAAnalysisExecutor {
 
