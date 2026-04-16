@@ -34,4 +34,52 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		CronConfiguration conf = createConfiguration("test", true);
 		perform(conf);
 	}
+	
+	@Test
+	public void testSymbolic1() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test1", true);
+		perform(conf);
+	}
+	
+	@Test
+	public void testSymbolic2() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test2", true);
+		perform(conf);
+	}
+	
+	@Test
+	public void testSymbolic3() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test3", true);
+		perform(conf);
+	}
+	
+	@Test
+	public void testSymbolic4() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test4", true);
+		perform(conf);
+	}
+	
+	@Test
+	public void testSymbolic5() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test5", true);
+		perform(conf);
+	}
+	
+	@Test
+	public void testSymbolic7() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test7", true);
+		perform(conf);
+	}
+	
+	@Test
+	public void testSymbolic8() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test8", true);
+		perform(conf);
+	}
+	
+	@Test
+	public void testSymbolic9() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test9", true);
+		perform(conf);
+	}
 }
