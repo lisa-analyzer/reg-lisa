@@ -35,7 +35,7 @@ import java.util.function.Predicate;
 
 public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomain> {
 
-//	private static final Constant TRUE = new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE);
+	private static final Constant TRUE = new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE);
 
 	/**
 	 * The top abstract element.
@@ -61,7 +61,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	
 	
 	public SymbolicAbstractDomain() {
-		this(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE), new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).top());
+		this(TRUE, new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).top());
 	}
 
 	private SymbolicAbstractDomain(SymbolicExpression pathCondition,
@@ -81,6 +81,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	@Override
 	public SymbolicAbstractDomain smallStepSemantics(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle)
 			throws SemanticException {
+		// nothing to do: this domain is non-relational and only updates state on assign()
 		return this;
 	}
 
