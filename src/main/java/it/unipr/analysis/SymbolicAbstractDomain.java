@@ -33,93 +33,192 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+/**
+ * A symbolic abstract domain that tracks, for each program variable, a
+ * symbolic expression representing its value in terms of fresh symbolic
+ * variables introduced at {@code input()} call sites. The symbolic state is
+ * stored as a functional lattice mapping each {@link Identifier} to an
+ * {@link ExpressionSet} containing its symbolic representative. Arithmetic
+ * expressions are simplified to a canonical linear-combination form via
+ * {@link #simplify(SymbolicExpression)}.
+ *
+ * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ */
 public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomain> {
 
+	/**
+	 * A synthetic {@link Constant} representing the boolean value {@code true},
+	 * used as the default path condition (i.e., no constraint).
+	 */
 	private static final Constant TRUE = new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE);
 
 	/**
-	 * The top abstract element.
-	 */
-//	private static final SymbolicAbstractDomain TOP = new SymbolicAbstractDomain();
-	
-	/**
-	 * The bottom abstract element.
-	 */
-//	private static final SymbolicAbstractDomain BOTTOM = new SymbolicAbstractDomain(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE),
-//			new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).bottom());
-//	
-	
-	/**
-	 * The path condition.
+	 * The path condition of this abstract element, represented as a
+	 * {@link SymbolicExpression}. The default value is {@link #TRUE}, meaning
+	 * no constraint is imposed on the execution path.
 	 */
 	private final SymbolicExpression pathCondition;
-	
+
 	/**
-	 * The symbolic state.
+	 * The symbolic state: a functional lattice mapping each tracked
+	 * {@link Identifier} to an {@link ExpressionSet} containing its symbolic
+	 * representative expression.
 	 */
 	private final GenericMapLattice<Identifier, ExpressionSet> symbolicState;
-	
-	
+
+	/**
+	 * Builds the top element of this domain, with the default path condition
+	 * ({@link #TRUE}) and a top symbolic state (no information).
+	 */
 	public SymbolicAbstractDomain() {
 		this(TRUE, new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).top());
 	}
 
-	private SymbolicAbstractDomain(SymbolicExpression pathCondition,
+	/**
+	 * Builds a {@link SymbolicAbstractDomain} with the given path condition and
+	 * symbolic state.
+	 *
+	 * @param pathCondition the path condition of this abstract element
+	 * @param symbolicState the functional map from identifiers to symbolic
+	 *                          expressions
+	 */
+	private SymbolicAbstractDomain(
+			SymbolicExpression pathCondition,
 			GenericMapLattice<Identifier, ExpressionSet> symbolicState) {
 		this.pathCondition = pathCondition;
 		this.symbolicState = symbolicState;
 	}
 
+	/**
+	 * Updates the symbolic state by assigning the symbolic evaluation of
+	 * {@code expression} to {@code id}. The expression is evaluated against
+	 * the current symbolic state via {@link #eval(SymbolicExpression)}, and the
+	 * resulting symbolic representative is stored in the functional map.
+	 *
+	 * @param id         the identifier being assigned
+	 * @param expression the right-hand side expression
+	 * @param pp         the program point where the assignment occurs
+	 * @param oracle     the semantic oracle for additional queries
+	 *
+	 * @return a new {@link SymbolicAbstractDomain} with the updated binding for
+	 *             {@code id}
+	 *
+	 * @throws SemanticException if an error occurs during evaluation
+	 */
 	@Override
-	public SymbolicAbstractDomain assign(Identifier id, ValueExpression expression, ProgramPoint pp,
-			SemanticOracle oracle) throws SemanticException {
+	public SymbolicAbstractDomain assign(
+			Identifier id,
+			ValueExpression expression,
+			ProgramPoint pp,
+			SemanticOracle oracle)
+			throws SemanticException {
 		SymbolicExpression v = eval(expression);
 		GenericMapLattice<Identifier, ExpressionSet> cpy = this.symbolicState.putState(id, new ExpressionSet(v));
 		return new SymbolicAbstractDomain(this.pathCondition, cpy);
 	}
 
+	/**
+	 * Computes the small-step semantics of {@code expression} at program point
+	 * {@code pp}. This domain only updates its state through assignments; all
+	 * other expressions leave the state unchanged.
+	 *
+	 * @param expression the expression whose semantics is computed
+	 * @param pp         the program point where the expression is evaluated
+	 * @param oracle     the semantic oracle for additional queries
+	 *
+	 * @return this domain unchanged
+	 *
+	 * @throws SemanticException if an error occurs during evaluation
+	 */
 	@Override
-	public SymbolicAbstractDomain smallStepSemantics(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle)
+	public SymbolicAbstractDomain smallStepSemantics(
+			ValueExpression expression,
+			ProgramPoint pp,
+			SemanticOracle oracle)
 			throws SemanticException {
 		// nothing to do: this domain is non-relational and only updates state on assign()
 		return this;
 	}
 
 	/**
-	 * Represents a linear combination of symbolic variables and an integer
-	 * constant: c1*x1 + c2*x2 + ... + cn*xn + k.
+	 * Represents a linear combination of symbolic variables with integer
+	 * coefficients plus an integer constant term:
+	 * {@code c1*x1 + c2*x2 + ... + cn*xn + k}. Zero-coefficient entries are
+	 * never stored in the coefficients map.
 	 *
-	 * <p>Zero-coefficient entries are never stored in the map.
+	 * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
 	 */
 	private static final class LinearCombination {
 
-		/** Maps each variable to its non-zero integer coefficient. */
+		/**
+		 * Maps each {@link Variable} to its non-zero integer coefficient.
+		 */
 		final Map<Variable, Integer> coefficients;
 
-		/** The integer constant term. */
+		/**
+		 * The integer constant term {@code k} of the linear combination.
+		 */
 		final int constantTerm;
 
-		private LinearCombination(Map<Variable, Integer> coefficients, int constantTerm) {
+		/**
+		 * Builds a linear combination with the given coefficients map and
+		 * constant term.
+		 *
+		 * @param coefficients the map from variables to their coefficients
+		 * @param constantTerm the integer constant term
+		 */
+		private LinearCombination(
+				Map<Variable, Integer> coefficients,
+				int constantTerm) {
 			this.coefficients = coefficients;
 			this.constantTerm = constantTerm;
 		}
 
+		/**
+		 * Builds a linear combination representing the pure integer constant
+		 * {@code k}.
+		 *
+		 * @param k the constant value
+		 *
+		 * @return a new {@link LinearCombination} with no variable terms and
+		 *             constant term {@code k}
+		 */
 		static LinearCombination ofConstant(int k) {
 			return new LinearCombination(new LinkedHashMap<>(), k);
 		}
 
+		/**
+		 * Builds a linear combination representing the single variable
+		 * {@code v} with coefficient {@code 1}.
+		 *
+		 * @param v the variable
+		 *
+		 * @return a new {@link LinearCombination} equal to {@code 1 * v}
+		 */
 		static LinearCombination ofVariable(Variable v) {
 			Map<Variable, Integer> m = new LinkedHashMap<>();
 			m.put(v, 1);
 			return new LinearCombination(m, 0);
 		}
 
-		/** True when there are no variable terms (pure constant). */
+		/**
+		 * Yields {@code true} if this linear combination has no variable terms
+		 * (i.e., it is a pure integer constant).
+		 *
+		 * @return whether this linear combination is a pure constant
+		 */
 		boolean isConstant() {
 			return coefficients.isEmpty();
 		}
 
-		/** Returns a new LinearCombination equal to {@code this + other}. */
+		/**
+		 * Returns a new {@link LinearCombination} equal to
+		 * {@code this + other}.
+		 *
+		 * @param other the addend
+		 *
+		 * @return the sum of this combination and {@code other}
+		 */
 		LinearCombination add(LinearCombination other) {
 			Map<Variable, Integer> merged = new LinkedHashMap<>(this.coefficients);
 			for (Map.Entry<Variable, Integer> e : other.coefficients.entrySet())
@@ -128,7 +227,14 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			return new LinearCombination(merged, this.constantTerm + other.constantTerm);
 		}
 
-		/** Returns a new LinearCombination equal to {@code this - other}. */
+		/**
+		 * Returns a new {@link LinearCombination} equal to
+		 * {@code this - other}.
+		 *
+		 * @param other the subtrahend
+		 *
+		 * @return the difference of this combination and {@code other}
+		 */
 		LinearCombination sub(LinearCombination other) {
 			Map<Variable, Integer> merged = new LinkedHashMap<>(this.coefficients);
 			for (Map.Entry<Variable, Integer> e : other.coefficients.entrySet())
@@ -137,7 +243,14 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			return new LinearCombination(merged, this.constantTerm - other.constantTerm);
 		}
 
-		/** Returns a new LinearCombination equal to {@code this * factor}. */
+		/**
+		 * Returns a new {@link LinearCombination} equal to
+		 * {@code this * factor}.
+		 *
+		 * @param factor the integer scalar
+		 *
+		 * @return this combination scaled by {@code factor}
+		 */
 		LinearCombination scale(int factor) {
 			if (factor == 0)
 				return ofConstant(0);
@@ -148,8 +261,13 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		}
 
 		/**
-		 * Returns a new LinearCombination equal to {@code this / divisor}
-		 * using integer (truncating) division on each coefficient.
+		 * Returns a new {@link LinearCombination} equal to
+		 * {@code this / divisor} using integer (truncating) division on each
+		 * coefficient and on the constant term.
+		 *
+		 * @param divisor the non-zero integer divisor
+		 *
+		 * @return this combination divided by {@code divisor}
 		 */
 		LinearCombination divideBy(int divisor) {
 			Map<Variable, Integer> divided = new LinkedHashMap<>();
@@ -163,25 +281,36 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 
 		/**
 		 * Reconstructs a canonical {@link SymbolicExpression} tree from this
-		 * linear combination.
+		 * linear combination. Variable terms are emitted in alphabetical order
+		 * by their string representation to ensure a deterministic output.
 		 *
 		 * <ul>
-		 * <li>Coefficient 1: emit the variable directly (no multiplication).
-		 * <li>Coefficient &gt; 1: emit {@code coeff * var}.
-		 * <li>Coefficient -1: emit as subtraction {@code result - var}.
-		 * <li>Coefficient &lt; -1: emit as subtraction {@code result - (|coeff| * var)}.
-		 * <li>Constant term appended last via addition (positive) or
-		 *     subtraction (negative).
+		 * <li>Coefficient {@code 1}: emit the variable directly.
+		 * <li>Coefficient {@code > 1}: emit {@code coeff * var}.
+		 * <li>Coefficient {@code -1}: emit as {@code result - var}.
+		 * <li>Coefficient {@code < -1}: emit as
+		 * {@code result - (|coeff| * var)}.
+		 * <li>Positive constant term: appended via addition.
+		 * <li>Negative constant term: appended via subtraction of its absolute
+		 * value.
 		 * </ul>
+		 *
+		 * @param type the static type of the resulting expression
+		 * @param loc  the code location to attach to the synthesised nodes
+		 *
+		 * @return the canonical {@link SymbolicExpression} for this linear
+		 *             combination
 		 */
-		SymbolicExpression toExpression(Type type, it.unive.lisa.program.cfg.CodeLocation loc) {
+		SymbolicExpression toExpression(
+				Type type,
+				it.unive.lisa.program.cfg.CodeLocation loc) {
 			List<Map.Entry<Variable, Integer>> entries = new ArrayList<>(coefficients.entrySet());
 
-			// Ensure deterministic ordering of variable terms: sort by variable string
+			// Deterministic ordering: sort by variable string representation
 			entries.sort((e1, e2) -> e1.getKey().toString().compareTo(e2.getKey().toString()));
 
-		if (entries.isEmpty())
-			return new Constant(Untyped.INSTANCE, constantTerm, SyntheticLocation.INSTANCE);
+			if (entries.isEmpty())
+				return new Constant(Untyped.INSTANCE, constantTerm, SyntheticLocation.INSTANCE);
 
 			// Build the first term
 			SymbolicExpression result = buildTerm(entries.get(0).getKey(), entries.get(0).getValue(), type, loc);
@@ -213,12 +342,24 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		}
 
 		/**
-		 * Builds a single term {@code coeff * var}, collapsing to just
-		 * {@code var} when {@code coeff == 1}.
-		 * Caller is responsible for passing a positive (absolute) coefficient.
+		 * Builds the expression tree for a single term {@code coeff * var},
+		 * collapsing to just {@code var} when {@code coeff == 1}. The caller
+		 * is responsible for passing the positive (absolute) value of the
+		 * coefficient.
+		 *
+		 * @param var   the variable
+		 * @param coeff the positive integer coefficient
+		 * @param type  the static type of the resulting expression
+		 * @param loc   the code location to attach to the synthesised node
+		 *
+		 * @return the expression {@code coeff * var}, or just {@code var} when
+		 *             {@code coeff == 1}
 		 */
-		private SymbolicExpression buildTerm(Variable var, int coeff,
-				Type type, it.unive.lisa.program.cfg.CodeLocation loc) {
+		private SymbolicExpression buildTerm(
+				Variable var,
+				int coeff,
+				Type type,
+				it.unive.lisa.program.cfg.CodeLocation loc) {
 			if (coeff == 1)
 				return var;
 			Constant c = new Constant(Untyped.INSTANCE, coeff, SyntheticLocation.INSTANCE);
@@ -227,16 +368,19 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	}
 
 	/**
-	 * Tries to reduce {@code expr} to a {@link LinearCombination}.
+	 * Tries to reduce {@code expr} to a {@link LinearCombination}. Returns
+	 * {@link Optional#empty()} whenever the expression is non-linear (e.g.,
+	 * {@code x * y}), in which case the caller should fall back to returning
+	 * the expression unchanged. This method expects a fully evaluated
+	 * expression tree whose leaves are either {@link Constant} or
+	 * {@link Variable} (including {@link SymbolicVariable}); it must not be
+	 * called with unresolved {@link Identifier} or {@link PushAny} nodes.
 	 *
-	 * <p>Returns {@link Optional#empty()} for non-linear sub-expressions
-	 * (e.g. {@code x * y}), in which case the caller falls back to returning
-	 * the expression unchanged.
+	 * @param expr the symbolic expression to reduce
 	 *
-	 * <p>This method expects a fully evaluated expression tree whose leaves are
-	 * either {@link Constant} or {@link Variable} (including
-	 * {@link SymbolicVariable}). It must not be called with unresolved
-	 * {@link Identifier} or {@link PushAny} nodes.
+	 * @return an {@link Optional} containing the {@link LinearCombination}, or
+	 *             {@link Optional#empty()} if the expression is non-linear or
+	 *             unsupported
 	 */
 	private Optional<LinearCombination> toLinearCombination(SymbolicExpression expr) {
 		if (expr instanceof Constant) {
@@ -289,8 +433,13 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 
 	/**
 	 * Simplifies a fully evaluated symbolic expression to its canonical linear
-	 * form. Falls back to returning the expression unchanged when it is
-	 * non-linear.
+	 * form via {@link #toLinearCombination(SymbolicExpression)}. Returns the
+	 * expression unchanged when it is non-linear.
+	 *
+	 * @param expr the symbolic expression to simplify
+	 *
+	 * @return the canonical linear-form expression, or {@code expr} if it
+	 *             cannot be reduced to a linear combination
 	 */
 	private SymbolicExpression simplify(SymbolicExpression expr) {
 		return toLinearCombination(expr)
@@ -299,30 +448,36 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	}
 
 	/**
-	 * Evaluates a symbolic expression by:
+	 * Evaluates a symbolic expression against the current symbolic state:
 	 * <ol>
-	 * <li>Resolving {@link Identifier} references from the symbolic state.
-	 * <li>Creating fresh {@link SymbolicVariable}s for {@link PushAny} inputs.
-	 * <li>Recursively evaluating {@link BinaryExpression} children, then
-	 *     simplifying the result to canonical linear form via
-	 *     {@link #simplify(SymbolicExpression)}.
+	 * <li>{@link Identifier} references are resolved by looking up their
+	 * symbolic representative in {@link #symbolicState}; if no information is
+	 * available the identifier is returned as-is.
+	 * <li>{@link PushAny} nodes produce a fresh {@link SymbolicVariable} whose
+	 * name is the string representation of the call-site code location.
+	 * <li>{@link Constant} nodes are returned unchanged.
+	 * <li>{@link BinaryExpression} nodes are evaluated recursively and then
+	 * simplified to canonical linear form via
+	 * {@link #simplify(SymbolicExpression)}.
 	 * </ol>
+	 *
+	 * @param expr the symbolic expression to evaluate
+	 *
+	 * @return the evaluated symbolic expression
 	 */
 	public SymbolicExpression eval(SymbolicExpression expr) {
 		if (expr instanceof Identifier) {
 			ExpressionSet set = this.symbolicState.getState((Identifier) expr);
 			if (set == null || set.elements.isEmpty())
 				return expr;
-			// ExpressionSet.elements may be an unordered collection; pick a deterministic
-			// representative by ordering by the expression's string representation.
 			return set.elements.stream()
-				.findFirst()
-				.get();
+					.findFirst()
+					.get();
 		}
 
 		if (expr instanceof PushAny)
 			return new SymbolicVariable(expr.getStaticType(),
-				expr.getCodeLocation().toString(), expr.getCodeLocation());
+					expr.getCodeLocation().toString(), expr.getCodeLocation());
 
 		if (expr instanceof Constant)
 			return expr;
@@ -342,13 +497,40 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		return expr;
 	}
 
+	/**
+	 * Refines the symbolic state under the assumption that {@code expression}
+	 * holds on the edge from {@code src} to {@code dest}. Currently returns
+	 * this state unchanged (no constraint propagation is implemented).
+	 *
+	 * @param expression the boolean expression assumed to hold
+	 * @param src        the source program point of the guarded edge
+	 * @param dest       the destination program point of the guarded edge
+	 * @param oracle     the semantic oracle for additional queries
+	 *
+	 * @return this domain unchanged
+	 *
+	 * @throws SemanticException if an error occurs during assumption
+	 */
 	@Override
-	public SymbolicAbstractDomain assume(ValueExpression expression, ProgramPoint src, ProgramPoint dest,
-			SemanticOracle oracle) throws SemanticException {
+	public SymbolicAbstractDomain assume(
+			ValueExpression expression,
+			ProgramPoint src,
+			ProgramPoint dest,
+			SemanticOracle oracle)
+			throws SemanticException {
 		// TODO Auto-generated method stub
 		return this;
 	}
 
+	/**
+	 * Returns {@code true} if this symbolic state holds a binding for
+	 * {@code id}, i.e., the identifier is tracked in the functional map.
+	 * Always returns {@code false} for top and bottom elements.
+	 *
+	 * @param id the identifier to look up
+	 *
+	 * @return whether this state contains information about {@code id}
+	 */
 	@Override
 	public boolean knowsIdentifier(Identifier id) {
 		if (isTop() || isBottom())
@@ -356,6 +538,18 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		return symbolicState.function != null && symbolicState.function.containsKey(id);
 	}
 
+	/**
+	 * Returns a copy of this symbolic state with the binding for {@code id}
+	 * removed. If this element is top, bottom, or {@code id} is not tracked,
+	 * this state is returned unchanged.
+	 *
+	 * @param id the identifier whose binding should be removed
+	 *
+	 * @return a new {@link SymbolicAbstractDomain} without a binding for
+	 *             {@code id}
+	 *
+	 * @throws SemanticException if an error occurs while computing the result
+	 */
 	@Override
 	public SymbolicAbstractDomain forgetIdentifier(Identifier id) throws SemanticException {
 		if (isTop() || isBottom())
@@ -368,6 +562,18 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 				new GenericMapLattice<>(symbolicState.lattice, newMap));
 	}
 
+	/**
+	 * Returns a copy of this symbolic state with all identifiers satisfying
+	 * {@code test} removed. If this element is top, bottom, or the functional
+	 * map is empty, this state is returned unchanged.
+	 *
+	 * @param test the predicate that selects the identifiers to forget
+	 *
+	 * @return a new {@link SymbolicAbstractDomain} with the matching bindings
+	 *             removed
+	 *
+	 * @throws SemanticException if an error occurs while computing the result
+	 */
 	@Override
 	public SymbolicAbstractDomain forgetIdentifiersIf(Predicate<Identifier> test) throws SemanticException {
 		if (isTop() || isBottom())
@@ -380,67 +586,217 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 				new GenericMapLattice<>(symbolicState.lattice, newMap));
 	}
 
+	/**
+	 * Checks whether {@code expression} is satisfied in this symbolic state.
+	 * Currently always returns {@link Satisfiability#UNKNOWN} as no constraint
+	 * solving is implemented.
+	 *
+	 * @param expression the expression to check for satisfiability
+	 * @param pp         the program point where the check is performed
+	 * @param oracle     the semantic oracle for additional queries
+	 *
+	 * @return {@link Satisfiability#UNKNOWN}
+	 *
+	 * @throws SemanticException if an error occurs during the check
+	 */
 	@Override
-	public Satisfiability satisfies(ValueExpression expression, ProgramPoint pp, SemanticOracle oracle)
+	public Satisfiability satisfies(
+			ValueExpression expression,
+			ProgramPoint pp,
+			SemanticOracle oracle)
 			throws SemanticException {
 		// TODO Auto-generated method stub
 		return Satisfiability.UNKNOWN;
 	}
 
+	/**
+	 * Returns a {@link StructuredRepresentation} of this symbolic state as a
+	 * string containing the string representation of the underlying functional
+	 * lattice.
+	 *
+	 * @return a {@link StringRepresentation} of the symbolic state
+	 */
 	@Override
 	public StructuredRepresentation representation() {
 		return new StringRepresentation(this.symbolicState.toString());
 	}
 
+	/**
+	 * Pushes a new interprocedural scope identified by {@code token} onto the
+	 * symbolic state. Each currently tracked identifier {@code id} is replaced
+	 * by {@code id.pushScope(token)}, which wraps it in an
+	 * {@link it.unive.lisa.symbolic.value.OutOfScopeIdentifier} so that the
+	 * binding is preserved but hidden during the callee's execution. Identifiers
+	 * for which {@code pushScope} returns {@code null} are dropped. On key
+	 * collision the associated {@link ExpressionSet} values are joined via
+	 * {@link ExpressionSet#lub}.
+	 *
+	 * @param token the scope token identifying the call site
+	 *
+	 * @return a new {@link SymbolicAbstractDomain} with all bindings scoped
+	 *             under {@code token}
+	 *
+	 * @throws SemanticException if an error occurs while pushing the scope
+	 */
 	@Override
 	public SymbolicAbstractDomain pushScope(ScopeToken token) throws SemanticException {
-		// TODO Auto-generated method stub
-		return null;
+		if (isTop() || isBottom())
+			return this;
+		if (symbolicState.function == null)
+			return this;
+
+		Map<Identifier, ExpressionSet> newMap = symbolicState.mkNewFunction(null, false);
+		for (Identifier id : symbolicState.getKeys()) {
+			Identifier scoped = (Identifier) id.pushScope(token);
+			if (scoped != null) {
+				ExpressionSet val = symbolicState.getState(id);
+				if (!newMap.containsKey(scoped))
+					newMap.put(scoped, val);
+				else
+					newMap.put(scoped, val.lub(newMap.get(scoped)));
+			}
+		}
+
+		return new SymbolicAbstractDomain(this.pathCondition,
+				new GenericMapLattice<>(symbolicState.lattice, newMap));
 	}
 
+	/**
+	 * Pops the interprocedural scope identified by {@code token} from the
+	 * symbolic state. Each currently tracked identifier {@code id} is
+	 * transformed via {@code id.popScope(token)}: identifiers that belong to
+	 * the current scope (i.e., regular {@link Variable} instances) return
+	 * {@code null} and are dropped; identifiers that were hidden by a matching
+	 * {@code pushScope} are restored to their original form. On key collision
+	 * the associated {@link ExpressionSet} values are joined via
+	 * {@link ExpressionSet#lub}.
+	 *
+	 * @param token the scope token identifying the call site to pop
+	 *
+	 * @return a new {@link SymbolicAbstractDomain} with the scope for
+	 *             {@code token} removed and previously hidden bindings restored
+	 *
+	 * @throws SemanticException if an error occurs while popping the scope
+	 */
 	@Override
 	public SymbolicAbstractDomain popScope(ScopeToken token) throws SemanticException {
-		// TODO Auto-generated method stub
-		return null;
+		if (isTop() || isBottom())
+			return this;
+		if (symbolicState.function == null)
+			return this;
+
+		Map<Identifier, ExpressionSet> newMap = symbolicState.mkNewFunction(null, false);
+		for (Identifier id : symbolicState.getKeys()) {
+			Identifier unscoped = (Identifier) id.popScope(token);
+			if (unscoped != null) {
+				ExpressionSet val = symbolicState.getState(id);
+				if (!newMap.containsKey(unscoped))
+					newMap.put(unscoped, val);
+				else
+					newMap.put(unscoped, val.lub(newMap.get(unscoped)));
+			}
+		}
+
+		return new SymbolicAbstractDomain(this.pathCondition,
+				new GenericMapLattice<>(symbolicState.lattice, newMap));
 	}
 
+	/**
+	 * Checks whether this abstract element is less than or equal to
+	 * {@code other} in the symbolic domain's partial order. Currently always
+	 * returns {@code true} (over-approximation stub).
+	 *
+	 * @param other the element to compare against
+	 *
+	 * @return {@code true}
+	 *
+	 * @throws SemanticException if an error occurs during the comparison
+	 */
 	@Override
 	public boolean lessOrEqual(SymbolicAbstractDomain other) throws SemanticException {
 		return true;
 	}
 
+	/**
+	 * Computes the least upper bound of this abstract element and {@code other}.
+	 * Currently returns {@code null} (stub — not yet implemented).
+	 *
+	 * @param other the element to join with
+	 *
+	 * @return the least upper bound of this element and {@code other}
+	 *
+	 * @throws SemanticException if an error occurs during the join
+	 */
 	@Override
 	public SymbolicAbstractDomain lub(SymbolicAbstractDomain other) throws SemanticException {
 		return null;
 	}
 
+	/**
+	 * Returns {@code true} if this element is the top of the symbolic domain,
+	 * i.e., the underlying symbolic state is top (no information).
+	 *
+	 * @return whether this is the top element
+	 */
 	@Override
 	public boolean isTop() {
 		return this.symbolicState.isTop();
 	}
-	
+
+	/**
+	 * Returns {@code true} if this element is the bottom of the symbolic
+	 * domain, i.e., the underlying symbolic state is bottom (unreachable).
+	 *
+	 * @return whether this is the bottom element
+	 */
 	@Override
 	public boolean isBottom() {
 		return this.symbolicState.isBottom();
 	}
-	
+
+	/**
+	 * Returns the top element of this domain: a fresh instance whose symbolic
+	 * state is top and whose path condition is {@code true}.
+	 *
+	 * @return the top element
+	 */
 	@Override
 	public SymbolicAbstractDomain top() {
 		return new SymbolicAbstractDomain(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE),
 				new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).top());
 	}
 
+	/**
+	 * Returns the bottom element of this domain: a fresh instance whose
+	 * symbolic state is bottom and whose path condition is {@code true}.
+	 *
+	 * @return the bottom element
+	 */
 	@Override
 	public SymbolicAbstractDomain bottom() {
 		return new SymbolicAbstractDomain(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE),
 				new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).bottom());
 	}
 
+	/**
+	 * Returns the hash code of this element, computed from its path condition
+	 * and symbolic state.
+	 *
+	 * @return the hash code
+	 */
 	@Override
 	public int hashCode() {
 		return Objects.hash(pathCondition, symbolicState);
 	}
 
+	/**
+	 * Returns {@code true} if {@code obj} is a {@link SymbolicAbstractDomain}
+	 * with the same path condition and symbolic state as this element.
+	 *
+	 * @param obj the object to compare
+	 *
+	 * @return whether this element equals {@code obj}
+	 */
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
