@@ -703,33 +703,46 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 
 	/**
 	 * Checks whether this abstract element is less than or equal to
-	 * {@code other} in the symbolic domain's partial order. Currently always
-	 * returns {@code true} (over-approximation stub).
+	 * {@code other} in the symbolic domain's partial order. The comparison is
+	 * delegated to the underlying {@link GenericMapLattice}, which performs a
+	 * pointwise check: for every tracked identifier {@code k}, the symbolic
+	 * expression set held by this element must be less than or equal to the one
+	 * held by {@code other}.
 	 *
 	 * @param other the element to compare against
 	 *
-	 * @return {@code true}
+	 * @return {@code true} if this element is below {@code other} in the
+	 *             partial order
 	 *
 	 * @throws SemanticException if an error occurs during the comparison
 	 */
 	@Override
 	public boolean lessOrEqual(SymbolicAbstractDomain other) throws SemanticException {
-		return true;
+		if (isBottom() || other.isTop())
+			return true;
+		if (isTop() || other.isBottom())
+			return false;
+		return symbolicState.lessOrEqual(other.symbolicState);
 	}
 
 	/**
 	 * Computes the least upper bound of this abstract element and {@code other}.
-	 * Currently returns {@code null} (stub — not yet implemented).
+	 * The join is delegated to the underlying {@link GenericMapLattice}, which
+	 * performs a pointwise join: for every identifier tracked in either
+	 * element, the resulting symbolic expression set is the join of the two
+	 * corresponding sets (missing entries are treated as top).
 	 *
 	 * @param other the element to join with
 	 *
-	 * @return the least upper bound of this element and {@code other}
+	 * @return a new {@link SymbolicAbstractDomain} whose symbolic state is the
+	 *             pointwise join of this element's state and {@code other}'s
+	 *             state
 	 *
 	 * @throws SemanticException if an error occurs during the join
 	 */
 	@Override
 	public SymbolicAbstractDomain lub(SymbolicAbstractDomain other) throws SemanticException {
-		return null;
+		return new SymbolicAbstractDomain(this.pathCondition, symbolicState.lub(other.symbolicState));
 	}
 
 	/**
