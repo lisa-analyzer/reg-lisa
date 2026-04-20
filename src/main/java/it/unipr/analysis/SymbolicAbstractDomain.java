@@ -351,20 +351,33 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 
 	@Override
 	public boolean knowsIdentifier(Identifier id) {
-		// TODO Auto-generated method stub
-		return true;
+		if (isTop() || isBottom())
+			return false;
+		return symbolicState.function != null && symbolicState.function.containsKey(id);
 	}
 
 	@Override
 	public SymbolicAbstractDomain forgetIdentifier(Identifier id) throws SemanticException {
-		// TODO Auto-generated method stub
-		return this;
+		if (isTop() || isBottom())
+			return this;
+		if (symbolicState.function == null || !symbolicState.function.containsKey(id))
+			return this;
+		Map<Identifier, ExpressionSet> newMap = symbolicState.mkNewFunction(symbolicState.function, true);
+		newMap.remove(id);
+		return new SymbolicAbstractDomain(this.pathCondition,
+				new GenericMapLattice<>(symbolicState.lattice, newMap));
 	}
 
 	@Override
 	public SymbolicAbstractDomain forgetIdentifiersIf(Predicate<Identifier> test) throws SemanticException {
-		// TODO Auto-generated method stub
-		return this;
+		if (isTop() || isBottom())
+			return this;
+		if (symbolicState.function == null)
+			return this;
+		Map<Identifier, ExpressionSet> newMap = symbolicState.mkNewFunction(symbolicState.function, true);
+		newMap.keySet().removeIf(test);
+		return new SymbolicAbstractDomain(this.pathCondition,
+				new GenericMapLattice<>(symbolicState.lattice, newMap));
 	}
 
 	@Override
