@@ -12,7 +12,6 @@ import it.unive.lisa.program.cfg.statement.Expression;
 import it.unive.lisa.program.cfg.statement.NaryExpression;
 import it.unive.lisa.program.cfg.statement.Statement;
 import it.unive.lisa.symbolic.value.PushAny;
-import it.unive.lisa.type.Untyped;
 
 public class InputExpression extends NaryExpression {
 
@@ -33,6 +32,6 @@ public class InputExpression extends NaryExpression {
 	@Override
 	public <A extends AbstractState<A>> AnalysisState<A> forwardSemanticsAux(InterproceduralAnalysis<A> interprocedural,
 			AnalysisState<A> state, ExpressionSet[] params, StatementStore<A> expressions) throws SemanticException {
-		return state.smallStepSemantics(new PushAny(Untyped.INSTANCE, getLocation()), this);
+		return state.smallStepSemantics(new PushAny(getProgram().getTypes().getIntegerType(), getLocation()), this);
 	}
 }

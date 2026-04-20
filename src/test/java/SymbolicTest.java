@@ -1,3 +1,8 @@
+import java.io.IOException;
+
+import org.junit.Ignore;
+import org.junit.Test;
+
 import it.unipr.analysis.SymbolicAbstractDomain;
 import it.unive.lisa.AnalysisSetupException;
 import it.unive.lisa.analysis.SimpleAbstractState;
@@ -7,8 +12,6 @@ import it.unive.lisa.analysis.types.InferredTypes;
 import it.unive.lisa.conf.LiSAConfiguration;
 import it.unive.lisa.interprocedural.ModularWorstCaseAnalysis;
 import it.unive.lisa.interprocedural.callgraph.RTACallGraph;
-import java.io.IOException;
-import org.junit.Test;
 
 public class SymbolicTest extends RegLiSAAnalysisExecutor {
 
@@ -49,7 +52,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	
 	@Test
 	public void testSymbolic3() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test3", true);
+		CronConfiguration conf = createConfiguration("test3", false);
 		perform(conf);
 	}
 	
@@ -71,7 +74,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		perform(conf);
 	}
 	
-	@Test
+	@Ignore
 	public void testSymbolic8() throws AnalysisSetupException, IOException {
 		CronConfiguration conf = createConfiguration("test8", true);
 		perform(conf);

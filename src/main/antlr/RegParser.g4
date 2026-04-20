@@ -31,9 +31,10 @@ e
 a
    : LPAR a RPAR # a_par
    | ID # id
+   | MINUS a # unary_minus
    | NUM # num
    | a TIMES a # times
-   | a op = (PLUS | MINUS) a # plus_minus
+   | a PLUS a # plus_minus
    | INPUT # input
    ;
    // boolean expression

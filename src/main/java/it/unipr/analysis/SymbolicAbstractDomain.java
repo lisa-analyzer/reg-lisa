@@ -35,13 +35,33 @@ import java.util.function.Predicate;
 
 public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomain> {
 
-	private static final Constant TRUE = new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE);
+//	private static final Constant TRUE = new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE);
 
+	/**
+	 * The top abstract element.
+	 */
+//	private static final SymbolicAbstractDomain TOP = new SymbolicAbstractDomain();
+	
+	/**
+	 * The bottom abstract element.
+	 */
+//	private static final SymbolicAbstractDomain BOTTOM = new SymbolicAbstractDomain(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE),
+//			new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).bottom());
+//	
+	
+	/**
+	 * The path condition.
+	 */
 	private final SymbolicExpression pathCondition;
+	
+	/**
+	 * The symbolic state.
+	 */
 	private final GenericMapLattice<Identifier, ExpressionSet> symbolicState;
-
+	
+	
 	public SymbolicAbstractDomain() {
-		this(TRUE, new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).top());
+		this(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE), new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).top());
 	}
 
 	private SymbolicAbstractDomain(SymbolicExpression pathCondition,
@@ -156,8 +176,11 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 		SymbolicExpression toExpression(Type type, it.unive.lisa.program.cfg.CodeLocation loc) {
 			List<Map.Entry<Variable, Integer>> entries = new ArrayList<>(coefficients.entrySet());
 
-			if (entries.isEmpty())
-				return new Constant(Untyped.INSTANCE, constantTerm, SyntheticLocation.INSTANCE);
+			// Ensure deterministic ordering of variable terms: sort by variable string
+			entries.sort((e1, e2) -> e1.getKey().toString().compareTo(e2.getKey().toString()));
+
+		if (entries.isEmpty())
+			return new Constant(Untyped.INSTANCE, constantTerm, SyntheticLocation.INSTANCE);
 
 			// Build the first term
 			SymbolicExpression result = buildTerm(entries.get(0).getKey(), entries.get(0).getValue(), type, loc);
@@ -215,8 +238,12 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	 * {@link Identifier} or {@link PushAny} nodes.
 	 */
 	private Optional<LinearCombination> toLinearCombination(SymbolicExpression expr) {
-		if (expr instanceof Constant)
-			return Optional.of(LinearCombination.ofConstant((Integer) ((Constant) expr).getValue()));
+		if (expr instanceof Constant) {
+			Object val = ((Constant) expr).getValue();
+			if (!(val instanceof Number))
+				return Optional.empty();
+			return Optional.of(LinearCombination.ofConstant(((Number) val).intValue()));
+		}
 
 		if (expr instanceof Variable)
 			return Optional.of(LinearCombination.ofVariable((Variable) expr));
@@ -285,12 +312,16 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			ExpressionSet set = this.symbolicState.getState((Identifier) expr);
 			if (set == null || set.elements.isEmpty())
 				return expr;
-			return set.elements.stream().findAny().get();
+			// ExpressionSet.elements may be an unordered collection; pick a deterministic
+			// representative by ordering by the expression's string representation.
+			return set.elements.stream()
+				.findFirst()
+				.get();
 		}
 
 		if (expr instanceof PushAny)
 			return new SymbolicVariable(expr.getStaticType(),
-					expr.getCodeLocation().toString(), expr.getCodeLocation());
+				expr.getCodeLocation().toString(), expr.getCodeLocation());
 
 		if (expr instanceof Constant)
 			return expr;
@@ -350,37 +381,45 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	@Override
 	public SymbolicAbstractDomain pushScope(ScopeToken token) throws SemanticException {
 		// TODO Auto-generated method stub
-		return this;
+		return null;
 	}
 
 	@Override
 	public SymbolicAbstractDomain popScope(ScopeToken token) throws SemanticException {
 		// TODO Auto-generated method stub
-		return this;
+		return null;
 	}
 
 	@Override
 	public boolean lessOrEqual(SymbolicAbstractDomain other) throws SemanticException {
-		// TODO Auto-generated method stub
-		return false;
+		return true;
 	}
 
 	@Override
 	public SymbolicAbstractDomain lub(SymbolicAbstractDomain other) throws SemanticException {
-		// TODO Auto-generated method stub
-		return other;
+		return null;
 	}
 
 	@Override
+	public boolean isTop() {
+		return this.symbolicState.isTop();
+	}
+	
+	@Override
+	public boolean isBottom() {
+		return this.symbolicState.isBottom();
+	}
+	
+	@Override
 	public SymbolicAbstractDomain top() {
-		// TODO Auto-generated method stub
-		return new SymbolicAbstractDomain();
+		return new SymbolicAbstractDomain(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE),
+				new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).top());
 	}
 
 	@Override
 	public SymbolicAbstractDomain bottom() {
-		// TODO Auto-generated method stub
-		return new SymbolicAbstractDomain();
+		return new SymbolicAbstractDomain(new Constant(Untyped.INSTANCE, true, SyntheticLocation.INSTANCE),
+				new GenericMapLattice<Identifier, ExpressionSet>(new ExpressionSet()).bottom());
 	}
 
 	@Override

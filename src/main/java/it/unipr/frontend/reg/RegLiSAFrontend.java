@@ -3,10 +3,23 @@ package it.unipr.frontend.reg;
 import static it.unipr.frontend.reg.Antlr4Utils.getCol;
 import static it.unipr.frontend.reg.Antlr4Utils.getLine;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import it.unipr.cfg.InputExpression;
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
 import it.unipr.reg.antlr.RegParser.InputContext;
+import it.unipr.reg.antlr.RegParser.Unary_minusContext;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
 import it.unive.lisa.program.ClassUnit;
 import it.unive.lisa.program.Program;
@@ -34,16 +47,7 @@ import it.unive.lisa.program.cfg.statement.logic.Not;
 import it.unive.lisa.program.cfg.statement.numeric.Addition;
 import it.unive.lisa.program.cfg.statement.numeric.Multiplication;
 import it.unive.lisa.program.cfg.statement.numeric.Subtraction;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import it.unive.lisa.symbolic.value.Constant;
 
 /**
  * Frontend class for translating REG language programs into LiSA's Control Flow
@@ -583,15 +587,25 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 		return new Int32Literal(currentCFG, loc, Integer.parseInt(ctx.NUM().getText()));
 	}
 
+	@Override
+	public Object visitUnary_minus(Unary_minusContext ctx) {
+		SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+		Expression left = (Expression) visit(ctx.a());
+
+		log.info("Subtraction at {}", loc);
+		Int32Literal zero = new Int32Literal(currentCFG, loc, 0);
+		return new Subtraction(currentCFG, loc, zero, left);	
+	}
+	
 	/**
 	 * Visit an identifier and create a reference to the corresponding variable.
 	 * <p>
 	 * Grammar: <code>a: ID</code>
 	 *
 	 * @param ctx The identifier context from the parser
-	 * 
+	 *
 	 * @return The VariableRef expression
-	 * 
+	 *
 	 * @throws IllegalStateException If the variable is not declared
 	 */
 	@Override
@@ -623,16 +637,9 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 		Expression right = (Expression) visit(ctx.a(1));
 
 		// Determine the operator type and create the appropriate expression
-		switch (ctx.op.getText()) {
-		case "+":
-			log.info("Addition at {}", loc);
-			return new Addition(currentCFG, loc, left, right);
-		case "-":
-			log.info("Subtraction at {}", loc);
-			return new Subtraction(currentCFG, loc, left, right);
-		default:
-			throw new UnsupportedOperationException("Unsupported operator " + ctx.op.getText());
-		}
+
+		log.info("Addition at {}", loc);
+		return new Addition(currentCFG, loc, left, right);
 	}
 
 	@Override

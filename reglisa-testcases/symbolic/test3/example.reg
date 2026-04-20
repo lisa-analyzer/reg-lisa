@@ -1,6 +1,5 @@
-x:=input();
-x:=x-1;
-y:=3+x;
-z:=x+y;
-z:=x-z;
-w:=y+z
+x := input();
+x := x + -1;
+y := 3 + x;
+z := x + y;
+w := y + z

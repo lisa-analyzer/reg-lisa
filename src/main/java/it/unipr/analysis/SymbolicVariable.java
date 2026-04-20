@@ -23,5 +23,4 @@ public class SymbolicVariable extends Variable {
 	public String toString() {
 		return super.toString() + "_sym";
 	}
-
 }
