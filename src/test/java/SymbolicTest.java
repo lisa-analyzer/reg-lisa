@@ -1,8 +1,8 @@
 import java.io.IOException;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
+import it.unipr.analysis.CombinationDomain;
 import it.unipr.analysis.SymbolicAbstractDomain;
 import it.unive.lisa.AnalysisSetupException;
 import it.unive.lisa.analysis.SimpleAbstractState;
@@ -22,11 +22,12 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		conf.programFile = "example.reg";
 		conf.serializeInputs = false;
 		conf.jsonOutput = true;
-		conf.abstractState = new SimpleAbstractState<>(new MonolithicHeap(), new SymbolicAbstractDomain(),
+		conf.abstractState = new SimpleAbstractState<>(new MonolithicHeap(), new CombinationDomain(),
 				new TypeEnvironment<>(new InferredTypes()));
 		if (generateCfg)
 			conf.analysisGraphs = LiSAConfiguration.GraphType.HTML_WITH_SUBNODES;
 		conf.serializeResults = true;
+		conf.forceUpdate = true;
 		conf.callGraph = new RTACallGraph();
 		conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
 		return conf;
@@ -34,49 +35,49 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 
 	@Test
 	public void testSymbolic() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test", true);
+		CronConfiguration conf = createConfiguration("test", false);
 		perform(conf);
 	}
 	
 	@Test
 	public void testSymbolic1() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test1", true);
+		CronConfiguration conf = createConfiguration("test1", false);
 		perform(conf);
 	}
 	
 	@Test
 	public void testSymbolic2() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test2", true);
+		CronConfiguration conf = createConfiguration("test2", false);
 		perform(conf);
 	}
 	
 	@Test
 	public void testSymbolic3() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test3", true);
+		CronConfiguration conf = createConfiguration("test3", false);
 		perform(conf);
 	}
 	
 	@Test
 	public void testSymbolic4() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test4", true);
+		CronConfiguration conf = createConfiguration("test4", false);
 		perform(conf);
 	}
 	
 	@Test
 	public void testSymbolic5() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test5", true);
+		CronConfiguration conf = createConfiguration("test5", false);
 		perform(conf);
 	}
 	
 	@Test
 	public void testSymbolic6() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test6", true);
+		CronConfiguration conf = createConfiguration("test6", false);
 		perform(conf);
 	}
 
 	@Test
 	public void testSymbolic7() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test7", true);
+		CronConfiguration conf = createConfiguration("test7", false);
 		perform(conf);
 	}
 	

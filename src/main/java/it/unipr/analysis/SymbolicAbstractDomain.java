@@ -1,5 +1,13 @@
 package it.unipr.analysis;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
+
 import it.unive.lisa.analysis.ScopeToken;
 import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.SemanticOracle;
@@ -25,13 +33,6 @@ import it.unive.lisa.type.Type;
 import it.unive.lisa.type.Untyped;
 import it.unive.lisa.util.representation.StringRepresentation;
 import it.unive.lisa.util.representation.StructuredRepresentation;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Predicate;
 
 /**
  * A symbolic abstract domain that tracks, for each program variable, a
@@ -618,7 +619,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	 */
 	@Override
 	public StructuredRepresentation representation() {
-		return new StringRepresentation(this.symbolicState.toString());
+		return new StringRepresentation("Path condition: " + pathCondition.toString() + ", \n" + "Symbolic state: " + symbolicState.toString());
 	}
 
 	/**
