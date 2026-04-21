@@ -52,7 +52,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	
 	@Test
 	public void testSymbolic3() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test3", false);
+		CronConfiguration conf = createConfiguration("test3", true);
 		perform(conf);
 	}
 	
@@ -69,12 +69,18 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	}
 	
 	@Test
+	public void testSymbolic6() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test6", true);
+		perform(conf);
+	}
+
+	@Test
 	public void testSymbolic7() throws AnalysisSetupException, IOException {
 		CronConfiguration conf = createConfiguration("test7", true);
 		perform(conf);
 	}
 	
-	@Ignore
+	@Test
 	public void testSymbolic8() throws AnalysisSetupException, IOException {
 		CronConfiguration conf = createConfiguration("test8", true);
 		perform(conf);
