@@ -26,7 +26,6 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		if (generateCfg)
 			conf.analysisGraphs = LiSAConfiguration.GraphType.HTML_WITH_SUBNODES;
 		conf.serializeResults = true;
-		conf.forceUpdate = true;
 		conf.callGraph = new RTACallGraph();
 		conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
 		return conf;
