@@ -1,23 +1,23 @@
 {
   "warnings" : [ ],
-  "files" : [ "report.json", "untyped_program.function().json" ],
+  "files" : [ "js/cose-base.js", "js/cytoscape-3.21.1.min.js", "js/cytoscape-expand-collapse.js", "js/cytoscape-fcose.js", "js/cytoscape-graphml-1.0.6-hier.js", "js/jquery-3.0.0.min.js", "js/layout-base.js", "report.json", "untyped_program.function().html", "untyped_program.function().json" ],
   "info" : {
     "cfgs" : "1",
-    "duration" : "3ms",
-    "end" : "2026-04-23T10:46:03.461+02:00",
-    "expressions" : "18",
-    "files" : "1",
+    "duration" : "12ms",
+    "end" : "2026-04-23T10:46:03.497+02:00",
+    "expressions" : "20",
+    "files" : "9",
     "globals" : "0",
     "members" : "1",
     "programs" : "1",
-    "start" : "2026-04-23T10:46:03.458+02:00",
-    "statements" : "6",
+    "start" : "2026-04-23T10:46:03.485+02:00",
+    "statements" : "7",
     "units" : "1",
     "version" : "0.1",
     "warnings" : "0"
   },
   "configuration" : {
-    "analysisGraphs" : "NONE",
+    "analysisGraphs" : "HTML_WITH_SUBNODES",
     "descendingPhaseType" : "NONE",
     "dumpForcesUnwinding" : "false",
     "fixpointWorkingSet" : "DuplicateFreeFIFOWorkingSet",
@@ -33,6 +33,6 @@
     "syntacticChecks" : "",
     "useWideningPoints" : "true",
     "wideningThreshold" : "5",
-    "workdir" : "reglisa-outputs/symbolic/test5"
+    "workdir" : "reglisa-outputs/symbolic/test8"
   }
 }

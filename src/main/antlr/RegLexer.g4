@@ -83,6 +83,15 @@ RPAR
 INPUT
    : 'input' LPAR RPAR
    ;
+   
+INPUTPOS
+   : 'inputPos' LPAR RPAR
+   ;
+
+INPUTNEG
+   : 'inputNeg' LPAR RPAR
+   ;
+
 
 WS
    : [ \n\t\r] -> skip

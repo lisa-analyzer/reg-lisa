@@ -3,7 +3,6 @@ import java.io.IOException;
 import org.junit.Test;
 
 import it.unipr.analysis.CombinationDomain;
-import it.unipr.analysis.SymbolicAbstractDomain;
 import it.unive.lisa.AnalysisSetupException;
 import it.unive.lisa.analysis.SimpleAbstractState;
 import it.unive.lisa.analysis.heap.MonolithicHeap;
@@ -83,13 +82,36 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	
 	@Test
 	public void testSymbolic8() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test8", true);
+		CronConfiguration conf = createConfiguration("test8", false);
 		perform(conf);
 	}
 	
 	@Test
 	public void testSymbolic9() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test9", true);
+		CronConfiguration conf = createConfiguration("test9", false);
+		perform(conf);
+	}
+
+	/**
+	 * Tests the combination domain on a program with an if-then branch:
+	 *
+	 * <pre>
+	 * x := input();
+	 * y := x + 1;
+	 * (x &lt;= 100 ? ; x := x + 1 ; y := x - 1);
+	 * z := x * y
+	 * </pre>
+	 *
+	 * The symbolic component tracks that {@code x}, {@code y}, and {@code z}
+	 * are linear combinations of the (positive) symbolic input variable. The
+	 * sign component refines the join at the merge point using the symbolic
+	 * state, confirming that both {@code x} and {@code y} are positive after
+	 * the branch regardless of which path was taken, and therefore that
+	 * {@code z = x * y} is also positive.
+	 */
+	@Test
+	public void testSymbolic10() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test10", true);
 		perform(conf);
 	}
 }

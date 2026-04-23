@@ -16,9 +16,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import it.unipr.cfg.InputExpression;
+import it.unipr.cfg.InputNegExpression;
+import it.unipr.cfg.InputPosExpression;
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
 import it.unipr.reg.antlr.RegParser.InputContext;
+import it.unipr.reg.antlr.RegParser.InputNegContext;
+import it.unipr.reg.antlr.RegParser.InputPosContext;
 import it.unipr.reg.antlr.RegParser.Unary_minusContext;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
 import it.unive.lisa.program.ClassUnit;
@@ -47,7 +51,6 @@ import it.unive.lisa.program.cfg.statement.logic.Not;
 import it.unive.lisa.program.cfg.statement.numeric.Addition;
 import it.unive.lisa.program.cfg.statement.numeric.Multiplication;
 import it.unive.lisa.program.cfg.statement.numeric.Subtraction;
-import it.unive.lisa.symbolic.value.Constant;
 
 /**
  * Frontend class for translating REG language programs into LiSA's Control Flow
@@ -645,6 +648,16 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 	@Override
 	public Object visitInput(InputContext ctx) {
 		return new InputExpression(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)));
+	}
+
+	@Override
+	public Object visitInputPos(InputPosContext ctx) {
+		return new InputPosExpression(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)));
+	}
+
+	@Override
+	public Object visitInputNeg(InputNegContext ctx) {
+		return new InputNegExpression(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)));
 	}
 
 	/**

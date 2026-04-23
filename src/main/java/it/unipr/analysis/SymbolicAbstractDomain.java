@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import it.unive.lisa.analysis.ScopeToken;
@@ -25,6 +26,9 @@ import it.unive.lisa.symbolic.value.PushAny;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.Variable;
 import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonGt;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonLt;
+import it.unive.lisa.symbolic.value.operator.binary.LogicalAnd;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingAdd;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingDiv;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingMul;
@@ -47,7 +51,7 @@ import it.unive.lisa.util.representation.StructuredRepresentation;
  */
 public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomain> {
 
-	/**
+	/** 
 	 * A synthetic {@link Constant} representing the boolean value {@code true},
 	 * used as the default path condition (i.e., no constraint).
 	 */
@@ -115,7 +119,63 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			throws SemanticException {
 		SymbolicExpression v = eval(expression);
 		GenericMapLattice<Identifier, ExpressionSet> cpy = this.symbolicState.putState(id, new ExpressionSet(v));
-		return new SymbolicAbstractDomain(this.pathCondition, cpy);
+
+		// If the RHS is a signed input, record the constraint in the path condition.
+		SymbolicExpression newPathCondition = this.pathCondition;
+		if (v instanceof SymbolicVariable) {
+			Constant zero = new Constant(Untyped.INSTANCE, 0, SyntheticLocation.INSTANCE);
+			SymbolicExpression constraint = null;
+			if (expression instanceof PushPos)
+				constraint = new BinaryExpression(Untyped.INSTANCE, v, zero, ComparisonGt.INSTANCE,
+						SyntheticLocation.INSTANCE);
+			else if (expression instanceof PushNeg)
+				constraint = new BinaryExpression(Untyped.INSTANCE, v, zero, ComparisonLt.INSTANCE,
+						SyntheticLocation.INSTANCE);
+			if (constraint != null)
+				newPathCondition = new BinaryExpression(Untyped.INSTANCE, this.pathCondition, constraint,
+						LogicalAnd.INSTANCE, SyntheticLocation.INSTANCE);
+		}
+
+		return new SymbolicAbstractDomain(newPathCondition, cpy);
+	}
+
+	/**
+	 * Returns the sign of a {@link SymbolicVariable} as recorded in the path
+	 * condition, or {@link it.unive.lisa.analysis.numeric.Sign#TOP} if no
+	 * constraint is known. Callers that default positively (e.g., for plain
+	 * {@code input()}) should treat a {@code TOP} result as
+	 * {@link it.unive.lisa.analysis.numeric.Sign#POS}.
+	 *
+	 * @param var the symbolic variable to query
+	 *
+	 * @return {@link it.unive.lisa.analysis.numeric.Sign#POS} if {@code var > 0}
+	 *             is in the path condition, {@link it.unive.lisa.analysis.numeric.Sign#NEG}
+	 *             if {@code var < 0} is, or {@link it.unive.lisa.analysis.numeric.Sign#TOP}
+	 *             if no constraint was found
+	 */
+	it.unive.lisa.analysis.numeric.Sign getSignOf(SymbolicVariable var) {
+		return extractSign(pathCondition, var);
+	}
+
+	private static it.unive.lisa.analysis.numeric.Sign extractSign(
+			SymbolicExpression pc, SymbolicVariable var) {
+		if (!(pc instanceof BinaryExpression))
+			return it.unive.lisa.analysis.numeric.Sign.TOP;
+		BinaryExpression bin = (BinaryExpression) pc;
+		BinaryOperator op = bin.getOperator();
+		if (op instanceof LogicalAnd) {
+			it.unive.lisa.analysis.numeric.Sign l = extractSign(bin.getLeft(), var);
+			if (!l.isTop())
+				return l;
+			return extractSign(bin.getRight(), var);
+		}
+		if (bin.getLeft().equals(var)) {
+			if (op instanceof ComparisonGt)
+				return it.unive.lisa.analysis.numeric.Sign.POS;
+			if (op instanceof ComparisonLt)
+				return it.unive.lisa.analysis.numeric.Sign.NEG;
+		}
+		return it.unive.lisa.analysis.numeric.Sign.TOP;
 	}
 
 	/**
@@ -821,5 +881,30 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			return false;
 		SymbolicAbstractDomain other = (SymbolicAbstractDomain) obj;
 		return Objects.equals(pathCondition, other.pathCondition) && Objects.equals(symbolicState, other.symbolicState);
+	}
+
+	/**
+	 * Returns the set of identifiers currently tracked in this symbolic state.
+	 * Returns an empty set when the state is top, bottom, or the functional map
+	 * is uninitialised.
+	 *
+	 * @return the set of tracked identifiers (never {@code null})
+	 */
+	Set<Identifier> getKeys() {
+		return symbolicState.getKeys();
+	}
+
+	/**
+	 * Returns the {@link ExpressionSet} associated with {@code id} in this
+	 * symbolic state, or {@code null} if {@code id} is not tracked.
+	 *
+	 * @param id the identifier to look up
+	 *
+	 * @return the expression set for {@code id}, or {@code null}
+	 */
+	ExpressionSet getExpressionSet(Identifier id) {
+		if (symbolicState.function == null || !symbolicState.function.containsKey(id))
+			return null;
+		return symbolicState.function.get(id);
 	}
 }

@@ -36,6 +36,8 @@ a
    | a TIMES a # times
    | a PLUS a # plus_minus
    | INPUT # input
+   | INPUTPOS # inputPos
+   | INPUTNEG # inputNeg
    ;
    // boolean expression
    
