@@ -6,7 +6,6 @@ import java.util.function.Predicate;
 import it.unive.lisa.analysis.ScopeToken;
 import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.SemanticOracle;
-import it.unive.lisa.analysis.lattices.ExpressionSet;
 import it.unive.lisa.analysis.lattices.Satisfiability;
 import it.unive.lisa.analysis.nonrelational.value.ValueEnvironment;
 import it.unive.lisa.analysis.numeric.Sign;
@@ -178,19 +177,15 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 
 		ValueEnvironment<Sign> result = base;
 		for (Identifier id : sym.getKeys()) {
-			ExpressionSet exprSet = sym.getExpressionSet(id);
-			if (exprSet == null || exprSet.elements.isEmpty())
+			SymbolicExpression expr = sym.getSymbolicExpression(id);
+			if (expr == null)
 				continue;
 
-			// Evaluate sign over all symbolic alternatives; take their join.
-			// Plain Identifiers in expressions are resolved via `base`.
-			Sign combined = Sign.BOTTOM;
-			for (SymbolicExpression expr : exprSet.elements)
-				combined = combined.lub(deriveSignFromExpr(expr, base, sym));
+			Sign derived = deriveSignFromExpr(expr, base, sym);
 
 			// Only override the sign join if we obtained something more concrete.
-			if (!combined.isTop() && !combined.isBottom())
-				result = result.putState(id, combined);
+			if (!derived.isTop() && !derived.isBottom())
+				result = result.putState(id, derived);
 		}
 		return result;
 	}
@@ -241,9 +236,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 			ProgramPoint pp,
 			SemanticOracle oracle)
 			throws SemanticException {		
-		SymbolicAbstractDomain newSymbolic = symbolic.smallStepSemantics(expression, pp, oracle);
-		ValueEnvironment<Sign> newSign = refineSignFromSymbolic(newSymbolic,
-				signEnv.smallStepSemantics(expression, pp, oracle));
+		ValueEnvironment<Sign> newSign = refineSignFromSymbolic(symbolic, signEnv);
 		// Reset symbolic to top only at guard points (comparison expressions).
 		// For sub-expressions (identifiers, constants, arithmetic) the symbolic
 		// must remain intact so that the guard expression itself can still use
@@ -252,7 +245,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 		// is evaluated.
 		boolean isGuard = expression instanceof BinaryExpression
 				&& ((BinaryExpression) expression).getOperator() instanceof ComparisonOperator;
-		return new CombinationDomain(isGuard ? newSymbolic.top() : newSymbolic, newSign);
+		return new CombinationDomain(isGuard ? symbolic.top() : symbolic, newSign);
 	}
 
 	/**
@@ -426,6 +419,14 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	 */
 	@Override
 	public boolean lessOrEqual(CombinationDomain other) throws SemanticException {
+		if (other.isTop())
+			return true;
+		else if (isTop())
+			return false;
+		else if (isBottom())
+			return true;
+		else if (other.isBottom())
+			return false;
 		return symbolic.lessOrEqual(other.symbolic) && signEnv.lessOrEqual(other.signEnv);
 	}
 
@@ -461,7 +462,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	 */
 	@Override
 	public CombinationDomain lub(CombinationDomain other) throws SemanticException {
-		if (isBottom() || other.isTop() || equals(other))
+		if (this == other || isBottom() || other.isTop() || equals(other))
 			return other;
 		if (other.isBottom() || isTop())
 			return this;

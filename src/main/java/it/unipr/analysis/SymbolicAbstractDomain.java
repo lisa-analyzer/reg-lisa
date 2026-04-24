@@ -300,9 +300,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 			ExpressionSet set = this.symbolicState.getState((Identifier) expr);
 			if (set == null || set.elements.isEmpty())
 				return expr;
-			return set.elements.stream()
-					.findFirst()
-					.get();
+			return set.elements.iterator().next();
 		}
 
 		if (expr instanceof PushAny)
@@ -572,7 +570,13 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	 */
 	@Override
 	public SymbolicAbstractDomain lub(SymbolicAbstractDomain other) throws SemanticException {
-		return new SymbolicAbstractDomain(this.pathCondition, symbolicState.lub(other.symbolicState));
+		if (isBottom() || other.isTop())
+			return other;
+		if (other.isBottom() || isTop())
+			return this;
+		SymbolicExpression mergedPC = Objects.equals(pathCondition, other.pathCondition)
+				? pathCondition : TRUE;
+		return new SymbolicAbstractDomain(mergedPC, symbolicState.lub(other.symbolicState));
 	}
 
 	/**
@@ -664,16 +668,21 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 	}
 
 	/**
-	 * Returns the {@link ExpressionSet} associated with {@code id} in this
+	 * Returns the symbolic expression associated with {@code id} in this
 	 * symbolic state, or {@code null} if {@code id} is not tracked.
 	 *
 	 * @param id the identifier to look up
 	 *
-	 * @return the expression set for {@code id}, or {@code null}
+	 * @return the symbolic expression for {@code id}, or {@code null}
 	 */
-	ExpressionSet getExpressionSet(Identifier id) {
+	SymbolicExpression getSymbolicExpression(Identifier id) {
 		if (symbolicState.function == null || !symbolicState.function.containsKey(id))
 			return null;
-		return symbolicState.function.get(id);
+		ExpressionSet set = symbolicState.function.get(id);
+		if (set == null || set.elements.isEmpty())
+			return null;
+		else if (set.size() > 1)
+			throw new IllegalStateException("Multiple symbolic expressions for identifier " + id);
+		return set.elements.iterator().next();
 	}
 }
