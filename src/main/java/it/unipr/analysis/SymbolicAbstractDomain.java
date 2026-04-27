@@ -1,5 +1,7 @@
 package it.unipr.analysis;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -128,11 +130,144 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicAbstractDomai
 				constraint = new BinaryExpression(Untyped.INSTANCE, v, zero, ComparisonLt.INSTANCE,
 						SyntheticLocation.INSTANCE);
 			if (constraint != null)
-				newPathCondition = new BinaryExpression(Untyped.INSTANCE, this.pathCondition, constraint,
-						LogicalAnd.INSTANCE, SyntheticLocation.INSTANCE);
+				newPathCondition = simplifyPathCondition(new BinaryExpression(
+						Untyped.INSTANCE, this.pathCondition, constraint,
+						LogicalAnd.INSTANCE, SyntheticLocation.INSTANCE));
 		}
 
 		return new SymbolicAbstractDomain(newPathCondition, cpy);
+	}
+
+	/**
+	 * Simplifies a path condition expression by:
+	 * <ul>
+	 * <li>removing {@code true} leaves from conjunctions;</li>
+	 * <li>for each variable, keeping only the weakest lower bound
+	 * ({@code var > k} with smallest {@code k}) and the strictest upper bound
+	 * ({@code var < k} with smallest {@code k});</li>
+	 * <li>returning a {@code false} constant when a contradiction is detected
+	 * ({@code var > lb} and {@code var < ub} with {@code lb >= ub}).</li>
+	 * </ul>
+	 *
+	 * @param pc the raw path condition to simplify
+	 *
+	 * @return the simplified path condition
+	 */
+	private SymbolicExpression simplifyPathCondition(SymbolicExpression pc) {
+		List<SymbolicExpression> flat = new ArrayList<>();
+		flattenAnd(pc, flat);
+
+		// Remove "true" leaves
+		flat.removeIf(c -> c instanceof Constant && Boolean.TRUE.equals(((Constant) c).getValue()));
+
+		if (flat.isEmpty())
+			return TRUE;
+
+		List<SymbolicExpression> result = simplifyComparisons(flat);
+		if (result == null)
+			return new Constant(Untyped.INSTANCE, false, SyntheticLocation.INSTANCE);
+		if (result.isEmpty())
+			return TRUE;
+
+		// Rebuild conjunction in deterministic order
+		result.sort((a, b) -> a.toString().compareTo(b.toString()));
+		SymbolicExpression out = result.get(0);
+		for (int i = 1; i < result.size(); i++)
+			out = new BinaryExpression(Untyped.INSTANCE, out, result.get(i),
+					LogicalAnd.INSTANCE, SyntheticLocation.INSTANCE);
+		return out;
+	}
+
+	/**
+	 * Flattens a left- or right-associative chain of {@link LogicalAnd}
+	 * conjunctions into a flat list of atomic constraints.
+	 *
+	 * @param expr the expression to flatten
+	 * @param out  the list to accumulate atomic constraints into
+	 */
+	private static void flattenAnd(SymbolicExpression expr, List<SymbolicExpression> out) {
+		if (expr instanceof BinaryExpression) {
+			BinaryExpression bin = (BinaryExpression) expr;
+			if (bin.getOperator() instanceof LogicalAnd) {
+				flattenAnd(bin.getLeft(), out);
+				flattenAnd(bin.getRight(), out);
+				return;
+			}
+		}
+		out.add(expr);
+	}
+
+	/**
+	 * Processes a flat list of constraints, merging comparison constraints on
+	 * the same variable. Returns {@code null} to signal a contradiction.
+	 * For two lower-bound constraints on the same variable ({@code var > k1}
+	 * and {@code var > k2}), the weaker one (smallest {@code k}) is kept.
+	 * For two upper-bound constraints ({@code var < k1} and {@code var < k2}),
+	 * the strictest one (smallest {@code k}) is kept.
+	 *
+	 * @param constraints the flat list of atomic constraints
+	 *
+	 * @return the simplified list, or {@code null} if a contradiction is found
+	 */
+	private List<SymbolicExpression> simplifyComparisons(List<SymbolicExpression> constraints) {
+		// Each entry: [varExpr, lowerBoundConst-or-null, upperBoundConst-or-null]
+		List<Object[]> varEntries = new ArrayList<>();
+		List<SymbolicExpression> other = new ArrayList<>();
+
+		for (SymbolicExpression c : constraints) {
+			if (c instanceof BinaryExpression) {
+				BinaryExpression bin = (BinaryExpression) c;
+				BinaryOperator op = bin.getOperator();
+				if ((op instanceof ComparisonGt || op instanceof ComparisonLt)
+						&& bin.getRight() instanceof Constant
+						&& ((Constant) bin.getRight()).getValue() instanceof Number) {
+					SymbolicExpression var = bin.getLeft();
+					int k = ((Number) ((Constant) bin.getRight()).getValue()).intValue();
+
+					// Find existing entry for this variable
+					Object[] entry = null;
+					for (Object[] e : varEntries)
+						if (((SymbolicExpression) e[0]).equals(var)) { entry = e; break; }
+					if (entry == null) {
+						entry = new Object[] { var, null, null };
+						varEntries.add(entry);
+					}
+
+					if (op instanceof ComparisonGt) {
+						// lower bound: keep the weakest (smallest k)
+						if (entry[1] == null || k < ((Number) ((Constant) entry[1]).getValue()).intValue())
+							entry[1] = bin.getRight();
+					} else {
+						// upper bound: keep the strictest (smallest k)
+						if (entry[2] == null || k < ((Number) ((Constant) entry[2]).getValue()).intValue())
+							entry[2] = bin.getRight();
+					}
+					continue;
+				}
+			}
+			other.add(c);
+		}
+
+		List<SymbolicExpression> result = new ArrayList<>(other);
+		for (Object[] entry : varEntries) {
+			SymbolicExpression var = (SymbolicExpression) entry[0];
+			Constant lb = (Constant) entry[1];
+			Constant ub = (Constant) entry[2];
+
+			if (lb != null && ub != null) {
+				int lbVal = ((Number) lb.getValue()).intValue();
+				int ubVal = ((Number) ub.getValue()).intValue();
+				if (lbVal >= ubVal)
+					return null; // contradiction: var > lb && var < ub with lb >= ub
+			}
+			if (lb != null)
+				result.add(new BinaryExpression(Untyped.INSTANCE, var, lb,
+						ComparisonGt.INSTANCE, SyntheticLocation.INSTANCE));
+			if (ub != null)
+				result.add(new BinaryExpression(Untyped.INSTANCE, var, ub,
+						ComparisonLt.INSTANCE, SyntheticLocation.INSTANCE));
+		}
+		return result;
 	}
 
 	/**
