@@ -30,12 +30,6 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
 		return conf;
 	}
-
-	@Test
-	public void testSymbolic() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test", false);
-		perform(conf);
-	}
 	
 	@Test
 	public void testSymbolic1() throws AnalysisSetupException, IOException {

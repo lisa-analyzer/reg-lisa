@@ -1,5 +1,5 @@
-x := input();
+x := inputNeg();
 x := x + -1;
-y := 3 + x;
-z := x + y;
+y := x + -3;
+z := y + x;
 w := y + z
