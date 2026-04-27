@@ -51,6 +51,7 @@ import it.unive.lisa.program.cfg.statement.logic.Not;
 import it.unive.lisa.program.cfg.statement.numeric.Addition;
 import it.unive.lisa.program.cfg.statement.numeric.Multiplication;
 import it.unive.lisa.program.cfg.statement.numeric.Subtraction;
+import it.unive.lisa.program.type.Int32Type;
 
 /**
  * Frontend class for translating REG language programs into LiSA's Control Flow
@@ -617,7 +618,7 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 		for (VariableTableEntry entry : descriptor.getVariables())
 			if (entry.getName().equals(ctx.ID().getText())) {
 				log.info("Referencing existing variable {}", entry);
-				return entry.createReference(currentCFG);
+				return new VariableRef(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)), ctx.getText(), Int32Type.INSTANCE);
 			}
 
 		throw new IllegalStateException("Variable " + ctx.ID().getText() + " not declared");
