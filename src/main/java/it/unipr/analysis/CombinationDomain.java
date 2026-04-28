@@ -268,19 +268,18 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 			ValueExpression expression,
 			ProgramPoint pp,
 			SemanticOracle oracle)
-			throws SemanticException {	
+			throws SemanticException {
 		
-		
-		if (pp instanceof Ret) {
-			// At a return node, we want to keep the sign information refined by guards in the caller.
-			// Since assign resets signEnv to top, we use savedSignEnv (accumulated from assume calls)
-			// as the base for refinement so that guard-refined signs are visible at the return node.
-			ValueEnvironment<Sign> refined = refineSignFromSymbolic(symbolic, savedSignEnv);
-			return new CombinationDomain(
-					symbolic.top(),
-					refined,
-					savedSignEnv);
-		}
+		 if (pp instanceof Ret) {                                                                                                                                                                                                                                  
+		    // At a return node, we want to keep the sign information refined by guards in the caller.                                                                                                                                                              
+		          // Since assign resets signEnv to top, we use savedSignEnv (accumulated from assume calls)                                                                                                                                                              
+		          // as the base for refinement so that guard-refined signs are visible at the return node.                                                                                                                                                               
+		          ValueEnvironment<Sign> refined = refineSignFromSymbolic(symbolic, savedSignEnv);                                                                                                                                                                        
+		          return new CombinationDomain(                                                                                                                                                                                                                           
+		              symbolic.top(),                                                                                                                                                                                                                                     
+		              refined,                                                                                                                                                                                                                                            
+		              savedSignEnv);                                                                                                                                                                                                                                      
+		        }   
 		
 		ValueEnvironment<Sign> newSign = refineSignFromSymbolic(symbolic, signEnv);
 		// Reset symbolic to top only at guard points (comparison expressions).
@@ -457,13 +456,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 		// Use savedSignEnv (accumulated from assume calls) as the base so that
 		// variables refined by guards (e.g. x:+ from assume(x>100)) are visible
 		// at the return node even though signEnv was reset to TOP by the last assign.
-		ValueEnvironment<Sign> refined = refineSignFromSymbolic(symbolic, savedSignEnv);
-		System.err.println("[DEBUG popScope] savedSignEnv=" + savedSignEnv
-				+ " | symbolic keys=" + symbolic.getKeys()
-				+ " | refined=" + refined
-				+ " | refined.isTop()=" + refined.isTop());
-		ValueEnvironment<Sign> newSignEnv = refined.popScope(token);
-		System.err.println("[DEBUG popScope] after popScope: newSignEnv=" + newSignEnv);
+		ValueEnvironment<Sign> newSignEnv = refineSignFromSymbolic(symbolic, savedSignEnv).popScope(token);
 		return new CombinationDomain(newSymbolic, newSignEnv);
 	}
 

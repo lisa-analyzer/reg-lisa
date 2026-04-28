@@ -33,6 +33,7 @@ a
    | ID # id
    | MINUS a # unary_minus
    | NUM # num
+   | DECIMAL # decimal
    | a TIMES a # times
    | a PLUS a # plus_minus
    | INPUT # input

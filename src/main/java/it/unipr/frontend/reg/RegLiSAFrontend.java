@@ -44,6 +44,7 @@ import it.unive.lisa.program.cfg.statement.comparison.Equal;
 import it.unive.lisa.program.cfg.statement.comparison.LessOrEqual;
 import it.unive.lisa.program.cfg.statement.comparison.LessThan;
 import it.unive.lisa.program.cfg.statement.literal.FalseLiteral;
+import it.unive.lisa.program.cfg.statement.literal.Float32Literal;
 import it.unive.lisa.program.cfg.statement.literal.Int32Literal;
 import it.unive.lisa.program.cfg.statement.literal.TrueLiteral;
 import it.unive.lisa.program.cfg.statement.logic.And;
@@ -589,6 +590,23 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 		SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
 		log.info("Num at {}", loc);
 		return new Int32Literal(currentCFG, loc, Integer.parseInt(ctx.NUM().getText()));
+	}
+
+	/**
+	 * Visits a decimal literal and creates a corresponding {@link Float32Literal}
+	 * node.
+	 * <p>
+	 * Grammar: <code>a: DECIMAL</code>
+	 *
+	 * @param ctx The decimal literal context from the parser
+	 *
+	 * @return The Float32Literal expression
+	 */
+	@Override
+	public Expression visitDecimal(RegParser.DecimalContext ctx) {
+		SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+		log.info("Decimal at {}", loc);
+		return new Float32Literal(currentCFG, loc, Float.parseFloat(ctx.DECIMAL().getText()));
 	}
 
 	@Override
