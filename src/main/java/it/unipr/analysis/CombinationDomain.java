@@ -11,6 +11,7 @@ import it.unive.lisa.analysis.nonrelational.value.ValueEnvironment;
 import it.unive.lisa.analysis.numeric.Sign;
 import it.unive.lisa.analysis.value.ValueDomain;
 import it.unive.lisa.program.cfg.ProgramPoint;
+import it.unive.lisa.program.cfg.statement.Ret;
 import it.unive.lisa.symbolic.SymbolicExpression;
 import it.unive.lisa.symbolic.value.BinaryExpression;
 import it.unive.lisa.symbolic.value.Constant;
@@ -79,21 +80,52 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	private final ValueEnvironment<Sign> signEnv;
 
 	/**
+	 * Auxiliary sign environment accumulated from {@link #assume} calls.
+	 * Unlike {@link #signEnv}, this field is NOT reset to top by
+	 * {@link #assign}; only the assigned identifier is forgotten from it.
+	 * It is used exclusively by {@link #popScope} to reconstruct the full
+	 * sign environment at the return node without exposing sign information
+	 * at intermediate assignment nodes. It is intentionally excluded from
+	 * {@link #equals}, {@link #hashCode}, and {@link #lessOrEqual} so that
+	 * it does not disturb fixpoint convergence.
+	 */
+	private final ValueEnvironment<Sign> savedSignEnv;
+
+	/**
 	 * Builds the top element of this combination domain.
 	 */
 	public CombinationDomain() {
-		this(new SymbolicAbstractDomain(), new ValueEnvironment<Sign>(new Sign()));
+		this(new SymbolicAbstractDomain(),
+				new ValueEnvironment<Sign>(new Sign()),
+				new ValueEnvironment<Sign>(new Sign()));
 	}
 
 	/**
-	 * Builds a combination domain from the given components.
+	 * Builds a combination domain from the given components, with
+	 * {@code savedSignEnv} initialised to top.
 	 *
 	 * @param symbolic the symbolic component
 	 * @param signEnv  the sign environment component
 	 */
 	public CombinationDomain(SymbolicAbstractDomain symbolic, ValueEnvironment<Sign> signEnv) {
+		this(symbolic, signEnv, new ValueEnvironment<Sign>(new Sign()));
+	}
+
+	/**
+	 * Builds a combination domain from all three components.
+	 *
+	 * @param symbolic      the symbolic component
+	 * @param signEnv       the sign environment component
+	 * @param savedSignEnv  the auxiliary sign environment accumulated from
+	 *                          assume calls (used only at {@link #popScope})
+	 */
+	public CombinationDomain(
+			SymbolicAbstractDomain symbolic,
+			ValueEnvironment<Sign> signEnv,
+			ValueEnvironment<Sign> savedSignEnv) {
 		this.symbolic = symbolic;
 		this.signEnv = signEnv;
+		this.savedSignEnv = savedSignEnv;
 	}
 
 	/**
@@ -211,10 +243,11 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 			ValueExpression expression,
 			ProgramPoint pp,
 			SemanticOracle oracle)
-			throws SemanticException {
+			throws SemanticException {		
 		return new CombinationDomain(
 				symbolic.assign(id, expression, pp, oracle),
-				signEnv.top());
+				signEnv.top(),
+				savedSignEnv.forgetIdentifier(id));
 	}
 
 	/**
@@ -235,7 +268,20 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 			ValueExpression expression,
 			ProgramPoint pp,
 			SemanticOracle oracle)
-			throws SemanticException {		
+			throws SemanticException {	
+		
+		
+		if (pp instanceof Ret) {
+			// At a return node, we want to keep the sign information refined by guards in the caller.
+			// Since assign resets signEnv to top, we use savedSignEnv (accumulated from assume calls)
+			// as the base for refinement so that guard-refined signs are visible at the return node.
+			ValueEnvironment<Sign> refined = refineSignFromSymbolic(symbolic, savedSignEnv);
+			return new CombinationDomain(
+					symbolic.top(),
+					refined,
+					savedSignEnv);
+		}
+		
 		ValueEnvironment<Sign> newSign = refineSignFromSymbolic(symbolic, signEnv);
 		// Reset symbolic to top only at guard points (comparison expressions).
 		// For sub-expressions (identifiers, constants, arithmetic) the symbolic
@@ -245,7 +291,8 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 		// is evaluated.
 		boolean isGuard = expression instanceof BinaryExpression
 				&& ((BinaryExpression) expression).getOperator() instanceof ComparisonOperator;
-		return new CombinationDomain(isGuard ? symbolic.top() : symbolic, newSign);
+				
+		return new CombinationDomain(isGuard ? symbolic.top() : symbolic, newSign, savedSignEnv);
 	}
 
 	/**
@@ -289,7 +336,8 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 			throws SemanticException {
 		ValueEnvironment<Sign> refinedSigns = refineSignFromSymbolic(symbolic, signEnv);
 		ValueEnvironment<Sign> assumedSigns = refinedSigns.assume(expression, src, dest, oracle);
-		return new CombinationDomain(symbolic.top(), assumedSigns);
+		// Save the assumed signs so popScope can reconstruct the full sign env at the return node.
+		return new CombinationDomain(symbolic.top(), assumedSigns, assumedSigns);
 	}
 
 	/**
@@ -318,7 +366,8 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	public CombinationDomain forgetIdentifier(Identifier id) throws SemanticException {
 		return new CombinationDomain(
 				symbolic.forgetIdentifier(id),
-				signEnv.forgetIdentifier(id));
+				signEnv.forgetIdentifier(id),
+				savedSignEnv.forgetIdentifier(id));
 	}
 
 	/**
@@ -335,7 +384,8 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	public CombinationDomain forgetIdentifiersIf(Predicate<Identifier> test) throws SemanticException {
 		return new CombinationDomain(
 				symbolic.forgetIdentifiersIf(test),
-				signEnv.forgetIdentifiersIf(test));
+				signEnv.forgetIdentifiersIf(test),
+				savedSignEnv.forgetIdentifiersIf(test));
 	}
 
 	/**
@@ -369,7 +419,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	@Override
 	public StructuredRepresentation representation() {
 		String sym = symbolic == null ? "<null>" : symbolic.representation().toString();
-		String signs = signEnv == null ? "<null>" : signEnv.representation().toString();
+		String signs = signEnv == null ? "<null>" : signEnv.toString();
 		return new StringRepresentation("Symbolic:\n" + sym + "\nSigns:\n" + signs);
 	}
 
@@ -387,7 +437,8 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	public CombinationDomain pushScope(ScopeToken token) throws SemanticException {
 		return new CombinationDomain(
 				symbolic.pushScope(token),
-				signEnv.pushScope(token));
+				signEnv.pushScope(token),
+				savedSignEnv.pushScope(token));
 	}
 
 	/**
@@ -402,9 +453,18 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 	 */
 	@Override
 	public CombinationDomain popScope(ScopeToken token) throws SemanticException {
-		return new CombinationDomain(
-				symbolic.popScope(token),
-				signEnv.popScope(token));
+		SymbolicAbstractDomain newSymbolic = symbolic.popScope(token);
+		// Use savedSignEnv (accumulated from assume calls) as the base so that
+		// variables refined by guards (e.g. x:+ from assume(x>100)) are visible
+		// at the return node even though signEnv was reset to TOP by the last assign.
+		ValueEnvironment<Sign> refined = refineSignFromSymbolic(symbolic, savedSignEnv);
+		System.err.println("[DEBUG popScope] savedSignEnv=" + savedSignEnv
+				+ " | symbolic keys=" + symbolic.getKeys()
+				+ " | refined=" + refined
+				+ " | refined.isTop()=" + refined.isTop());
+		ValueEnvironment<Sign> newSignEnv = refined.popScope(token);
+		System.err.println("[DEBUG popScope] after popScope: newSignEnv=" + newSignEnv);
+		return new CombinationDomain(newSymbolic, newSignEnv);
 	}
 
 	/**
@@ -470,7 +530,8 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 		// Use OTHER symbolic (block body summary) only for sign refinement.
 		ValueEnvironment<Sign> lubSigns = signEnv.lub(other.signEnv);
 		ValueEnvironment<Sign> refined = refineSignFromSymbolic(other.symbolic, lubSigns);
-		return new CombinationDomain(this.symbolic, refined);
+		ValueEnvironment<Sign> lubSaved = savedSignEnv.lub(other.savedSignEnv);
+		return new CombinationDomain(this.symbolic, refined, lubSaved);
 	}
 
 	/**
