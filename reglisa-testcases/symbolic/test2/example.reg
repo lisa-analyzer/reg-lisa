@@ -1,5 +1,5 @@
-x:=input();
+x:=inputNeg();
 y:=2;
 z:=y + -x;
 w:=7 + -x;
-y:=y-z-w
+y:=y + -z + -w

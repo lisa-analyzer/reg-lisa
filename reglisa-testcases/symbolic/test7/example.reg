@@ -1,5 +1,5 @@
 x:=3;
 y:=5;
-z:=input();
+z:=inputPos();
 z:=z+x*y;
-w:=y+z-(2*y*z)
+w:=y+z+(-2*y*z)

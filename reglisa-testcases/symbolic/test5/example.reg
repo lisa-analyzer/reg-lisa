@@ -1,4 +1,4 @@
-x:=input();
+x:=inputPos();
 y:=3;
 z:=2+x;
 w:=y*z;
