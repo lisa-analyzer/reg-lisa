@@ -247,7 +247,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomain> {
 		return new CombinationDomain(
 				symbolic.assign(id, expression, pp, oracle),
 				signEnv.top(),
-				savedSignEnv.forgetIdentifier(id));
+				savedSignEnv);
 	}
 
 	/**
