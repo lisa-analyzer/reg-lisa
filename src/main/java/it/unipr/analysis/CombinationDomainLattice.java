@@ -254,16 +254,11 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	 */
 	@Override
 	public CombinationDomainLattice lub(CombinationDomainLattice other) throws SemanticException {
-		if (this == other || isBottom() || other.isTop() || equals(other))
-			return other;
-		if (other.isBottom() || isTop())
-			return this;
 		// Keep THIS symbolic fixed (pre-loop / block-entry state).
 		// Use OTHER symbolic (block body summary) only for SignLattice refinement.
-		ValueEnvironment<SignLattice> lubSignLattices = signEnv.lub(other.signEnv);
-		ValueEnvironment<SignLattice> refined = refineSignLatticeFromSymbolic(other.symbolic, lubSignLattices);
-		ValueEnvironment<SignLattice> lubSaved = savedSignEnv.lub(other.savedSignEnv);
-		return new CombinationDomainLattice(this.symbolic, refined, lubSaved);
+		ValueEnvironment<SignLattice> refined = refineSignLatticeFromSymbolic(other.symbolic, other.savedSignEnv);
+		ValueEnvironment<SignLattice> lubSaved = refined.lub(other.savedSignEnv);
+		return new CombinationDomainLattice(this.symbolic, lubSaved, lubSaved);
 	}
 
 	/**
@@ -343,7 +338,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 
 			// Only override the SignLattice join if we obtained something more
 			// concrete.
-			if (!derived.isTop() && !derived.isBottom())
+//			if (!derived.isTop() && !derived.isBottom())
 				result = result.putState(id, derived);
 		}
 		return result;
@@ -425,7 +420,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(signEnv, symbolic);
+		return Objects.hash(signEnv, symbolic, savedSignEnv);
 	}
 
 	@Override
@@ -438,6 +433,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 			return false;
 		CombinationDomainLattice other = (CombinationDomainLattice) obj;
 		return Objects.equals(signEnv, other.signEnv)
-				&& Objects.equals(symbolic, other.symbolic);
+				&& Objects.equals(symbolic, other.symbolic) 
+				&& Objects.equals(savedSignEnv, other.savedSignEnv);
 	}
 }

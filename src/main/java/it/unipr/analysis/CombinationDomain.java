@@ -135,7 +135,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 					state.getSavedSignLatticeEnv());
 		}
 
-		ValueEnvironment<SignLattice> newSignLattice = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
+		ValueEnvironment<SignLattice> newSignLattice = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSavedSignLatticeEnv());
 		// Reset symbolic to top only at guard points (comparison expressions).
 		// For sub-expressions (identifiers, constants, arithmetic) the symbolic
 		// must remain intact so that the guard expression itself can still use
@@ -189,7 +189,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 		ValueEnvironment<SignLattice> assumedSignLattices = new Sign().assume(refinedSignLattices, expression, src, dest, oracle);
 		// Save the assumed SignLattices so popScope can reconstruct the full SignLattice env
 		// at the return node.
-		return new CombinationDomainLattice(state.getSymbolic().top(), assumedSignLattices, assumedSignLattices);
+		return new CombinationDomainLattice(state.getSymbolic().top(), assumedSignLattices.top(), assumedSignLattices);
 	}
 
 	@Override
