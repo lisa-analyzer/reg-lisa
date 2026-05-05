@@ -3,18 +3,6 @@ package it.unipr.frontend.reg;
 import static it.unipr.frontend.reg.Antlr4Utils.getCol;
 import static it.unipr.frontend.reg.Antlr4Utils.getLine;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import it.unipr.cfg.InputExpression;
 import it.unipr.cfg.InputNegExpression;
 import it.unipr.cfg.InputPosExpression;
@@ -53,6 +41,16 @@ import it.unive.lisa.program.cfg.statement.numeric.Addition;
 import it.unive.lisa.program.cfg.statement.numeric.Multiplication;
 import it.unive.lisa.program.cfg.statement.numeric.Subtraction;
 import it.unive.lisa.program.type.Int32Type;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Frontend class for translating REG language programs into LiSA's Control Flow
@@ -593,8 +591,8 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 	}
 
 	/**
-	 * Visits a decimal literal and creates a corresponding {@link Float32Literal}
-	 * node.
+	 * Visits a decimal literal and creates a corresponding
+	 * {@link Float32Literal} node.
 	 * <p>
 	 * Grammar: <code>a: DECIMAL</code>
 	 *
@@ -616,9 +614,9 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 
 		log.info("Subtraction at {}", loc);
 		Int32Literal zero = new Int32Literal(currentCFG, loc, 0);
-		return new Subtraction(currentCFG, loc, zero, left);	
+		return new Subtraction(currentCFG, loc, zero, left);
 	}
-	
+
 	/**
 	 * Visit an identifier and create a reference to the corresponding variable.
 	 * <p>
@@ -636,7 +634,8 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 		for (VariableTableEntry entry : descriptor.getVariables())
 			if (entry.getName().equals(ctx.ID().getText())) {
 				log.info("Referencing existing variable {}", entry);
-				return new VariableRef(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)), ctx.getText(), Int32Type.INSTANCE);
+				return new VariableRef(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)),
+						ctx.getText(), Int32Type.INSTANCE);
 			}
 
 		throw new IllegalStateException("Variable " + ctx.ID().getText() + " not declared");

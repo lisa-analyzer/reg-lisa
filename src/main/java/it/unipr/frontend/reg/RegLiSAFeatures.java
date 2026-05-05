@@ -1,7 +1,7 @@
 package it.unipr.frontend.reg;
 
 import it.unive.lisa.program.language.LanguageFeatures;
-import it.unive.lisa.program.language.hierarchytraversal.HierarcyTraversalStrategy;
+import it.unive.lisa.program.language.hierarchytraversal.HierarchyTraversalStrategy;
 import it.unive.lisa.program.language.hierarchytraversal.SingleInheritanceTraversalStrategy;
 import it.unive.lisa.program.language.parameterassignment.ParameterAssigningStrategy;
 import it.unive.lisa.program.language.parameterassignment.PythonLikeAssigningStrategy;
@@ -27,11 +27,6 @@ public class RegLiSAFeatures extends LanguageFeatures {
 	}
 
 	@Override
-	public HierarcyTraversalStrategy getTraversalStrategy() {
-		return SingleInheritanceTraversalStrategy.INSTANCE;
-	}
-
-	@Override
 	public ParameterAssigningStrategy getAssigningStrategy() {
 		return PythonLikeAssigningStrategy.INSTANCE;
 	}
@@ -39,5 +34,10 @@ public class RegLiSAFeatures extends LanguageFeatures {
 	@Override
 	public ProgramValidationLogic getProgramValidationLogic() {
 		return new BaseValidationLogic();
+	}
+
+	@Override
+	public HierarchyTraversalStrategy getTraversalStrategy() {
+		return SingleInheritanceTraversalStrategy.INSTANCE;
 	}
 }

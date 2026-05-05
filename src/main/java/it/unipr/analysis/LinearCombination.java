@@ -18,8 +18,8 @@ import java.util.Map;
 /**
  * Represents a linear combination of symbolic variables with integer
  * coefficients plus an integer constant term:
- * {@code c1*x1 + c2*x2 + ... + cn*xn + k}. Zero-coefficient entries are
- * never stored in the coefficients map.
+ * {@code c1*x1 + c2*x2 + ... + cn*xn + k}. Zero-coefficient entries are never
+ * stored in the coefficients map.
  *
  * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
  */
@@ -36,8 +36,8 @@ class LinearCombination {
 	final int constantTerm;
 
 	/**
-	 * Builds a linear combination with the given coefficients map and
-	 * constant term.
+	 * Builds a linear combination with the given coefficients map and constant
+	 * term.
 	 *
 	 * @param coefficients the map from variables to their coefficients
 	 * @param constantTerm the integer constant term
@@ -63,8 +63,8 @@ class LinearCombination {
 	}
 
 	/**
-	 * Builds a linear combination representing the single variable
-	 * {@code v} with coefficient {@code 1}.
+	 * Builds a linear combination representing the single variable {@code v}
+	 * with coefficient {@code 1}.
 	 *
 	 * @param v the variable
 	 *
@@ -87,8 +87,7 @@ class LinearCombination {
 	}
 
 	/**
-	 * Returns a new {@link LinearCombination} equal to
-	 * {@code this + other}.
+	 * Returns a new {@link LinearCombination} equal to {@code this + other}.
 	 *
 	 * @param other the addend
 	 *
@@ -103,8 +102,7 @@ class LinearCombination {
 	}
 
 	/**
-	 * Returns a new {@link LinearCombination} equal to
-	 * {@code this - other}.
+	 * Returns a new {@link LinearCombination} equal to {@code this - other}.
 	 *
 	 * @param other the subtrahend
 	 *
@@ -119,8 +117,7 @@ class LinearCombination {
 	}
 
 	/**
-	 * Returns a new {@link LinearCombination} equal to
-	 * {@code this * factor}.
+	 * Returns a new {@link LinearCombination} equal to {@code this * factor}.
 	 *
 	 * @param factor the integer scalar
 	 *
@@ -136,9 +133,9 @@ class LinearCombination {
 	}
 
 	/**
-	 * Returns a new {@link LinearCombination} equal to
-	 * {@code this / divisor} using integer (truncating) division on each
-	 * coefficient and on the constant term.
+	 * Returns a new {@link LinearCombination} equal to {@code this / divisor}
+	 * using integer (truncating) division on each coefficient and on the
+	 * constant term.
 	 *
 	 * @param divisor the non-zero integer divisor
 	 *
@@ -155,16 +152,14 @@ class LinearCombination {
 	}
 
 	/**
-	 * Reconstructs a canonical {@link SymbolicExpression} tree from this
-	 * linear combination. Variable terms are emitted in alphabetical order
-	 * by their string representation to ensure a deterministic output.
-	 *
+	 * Reconstructs a canonical {@link SymbolicExpression} tree from this linear
+	 * combination. Variable terms are emitted in alphabetical order by their
+	 * string representation to ensure a deterministic output.
 	 * <ul>
 	 * <li>Coefficient {@code 1}: emit the variable directly.
 	 * <li>Coefficient {@code > 1}: emit {@code coeff * var}.
 	 * <li>Coefficient {@code -1}: emit as {@code result - var}.
-	 * <li>Coefficient {@code < -1}: emit as
-	 * {@code result - (|coeff| * var)}.
+	 * <li>Coefficient {@code < -1}: emit as {@code result - (|coeff| * var)}.
 	 * <li>Positive constant term: appended via addition.
 	 * <li>Negative constant term: appended via subtraction of its absolute
 	 * value.
@@ -218,9 +213,8 @@ class LinearCombination {
 
 	/**
 	 * Builds the expression tree for a single term {@code coeff * var},
-	 * collapsing to just {@code var} when {@code coeff == 1}. The caller
-	 * is responsible for passing the positive (absolute) value of the
-	 * coefficient.
+	 * collapsing to just {@code var} when {@code coeff == 1}. The caller is
+	 * responsible for passing the positive (absolute) value of the coefficient.
 	 *
 	 * @param var   the variable
 	 * @param coeff the positive integer coefficient

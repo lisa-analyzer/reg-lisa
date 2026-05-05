@@ -6,20 +6,21 @@ import java.io.IOException;
 import org.junit.Test;
 
 import it.unive.lisa.AnalysisSetupException;
-import it.unive.lisa.conf.LiSAConfiguration;
+import it.unive.lisa.outputs.DotInputs;
+import it.unive.lisa.outputs.JSONReportDumper;
+import it.unive.lisa.outputs.JSONResults;
 
 public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
 
 	private static CronConfiguration createConfiguration(String subDir, boolean generateCfg) {
 		CronConfiguration conf = new CronConfiguration();
-		conf.testDir = "cfg";
-		conf.testSubDir = subDir;
+		conf.testDir = "cfg/" + subDir;
 		conf.programFile = "example.reg";
-		conf.serializeResults = true;
-		conf.serializeInputs = true;
-		conf.jsonOutput = true;
+		conf.outputs.add(new JSONResults<>());
+		conf.outputs.add(new JSONReportDumper());
+		conf.outputs.add(new JSONResults<>());
 		if (generateCfg)
-			conf.analysisGraphs = LiSAConfiguration.GraphType.DOT;
+			conf.outputs.add(new DotInputs());
 		return conf;
 	}
 

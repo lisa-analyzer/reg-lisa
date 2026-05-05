@@ -87,7 +87,7 @@ RPAR
 INPUT
    : 'input' LPAR RPAR
    ;
-   
+
 INPUTPOS
    : 'inputPos' LPAR RPAR
    ;
@@ -95,7 +95,6 @@ INPUTPOS
 INPUTNEG
    : 'inputNeg' LPAR RPAR
    ;
-
 
 WS
    : [ \n\t\r] -> skip

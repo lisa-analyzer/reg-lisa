@@ -11,15 +11,16 @@ import org.apache.logging.log4j.Logger;
 
 import it.unipr.frontend.reg.RegLiSAFrontend;
 import it.unive.lisa.LiSA;
-import it.unive.lisa.analysis.SimpleAbstractState;
+import it.unive.lisa.analysis.SimpleAbstractDomain;
 import it.unive.lisa.analysis.heap.MonolithicHeap;
-import it.unive.lisa.analysis.nonrelational.value.TypeEnvironment;
-import it.unive.lisa.analysis.nonrelational.value.ValueEnvironment;
 import it.unive.lisa.analysis.numeric.Interval;
 import it.unive.lisa.analysis.types.InferredTypes;
 import it.unive.lisa.conf.LiSAConfiguration;
 import it.unive.lisa.interprocedural.ModularWorstCaseAnalysis;
 import it.unive.lisa.interprocedural.callgraph.RTACallGraph;
+import it.unive.lisa.outputs.DotInputs;
+import it.unive.lisa.outputs.HtmlInputs;
+import it.unive.lisa.outputs.JSONReportDumper;
 import it.unive.lisa.program.Program;
 
 public class Main {
@@ -62,23 +63,23 @@ public class Main {
 			LiSAConfiguration conf = new LiSAConfiguration();
 
 			conf.workdir = outputDir;
-			conf.serializeResults = true;
-			conf.serializeInputs = true;
-			conf.jsonOutput = true;
-			conf.analysisGraphs = graph.equals("DOT")
-					? LiSAConfiguration.GraphType.DOT
-					: LiSAConfiguration.GraphType.HTML;
+			
+			conf.outputs.add(new JSONReportDumper());
+			if (graph.equals("DOT"))
+				conf.outputs.add(new DotInputs());
+			else 
+				conf.outputs.add(new HtmlInputs(true));
 
 			if (analysis) {
-				conf.abstractState = new SimpleAbstractState<>(
+				conf.analysis = new SimpleAbstractDomain<>(
 						new MonolithicHeap(),
-						new ValueEnvironment<>(new Interval()),
-						new TypeEnvironment<>(new InferredTypes()));
+						new Interval(),
+						new InferredTypes());
 
 				// by disabling useWideningPoints
 				// the widening is applied in all points of the program
 				conf.useWideningPoints = false;
-				conf.optimize = false;
+//				conf.optimize = false;
 				conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
 				conf.callGraph = new RTACallGraph();
 			} else

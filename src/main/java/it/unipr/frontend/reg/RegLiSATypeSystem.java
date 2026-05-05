@@ -4,6 +4,7 @@ import it.unive.lisa.program.type.BoolType;
 import it.unive.lisa.program.type.Int32Type;
 import it.unive.lisa.program.type.StringType;
 import it.unive.lisa.type.BooleanType;
+import it.unive.lisa.type.CharacterType;
 import it.unive.lisa.type.NumericType;
 import it.unive.lisa.type.Type;
 import it.unive.lisa.type.TypeSystem;
@@ -39,5 +40,17 @@ public class RegLiSATypeSystem extends TypeSystem {
 	public boolean canBeReferenced(
 			Type type) {
 		return type.isInMemoryType();
+	}
+
+	@Override
+	public CharacterType getCharacterType() {
+		// not needed
+		return null;
+	}
+
+	@Override
+	public int distanceBetweenTypes(Type first, Type second) {
+		// not needed
+		return 0;
 	}
 }

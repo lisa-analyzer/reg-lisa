@@ -4,16 +4,16 @@
   "files" : [ "report.json", "untyped_program.function().graph.json" ],
   "info" : {
     "cfgs" : "1",
-    "duration" : "3ms",
-    "end" : "2026-05-05T11:47:16.925+02:00",
-    "expressions" : "18",
+    "duration" : "102ms",
+    "end" : "2026-05-05T15:06:41.877+02:00",
+    "expressions" : "20",
     "files" : "1",
     "globals" : "0",
     "members" : "1",
     "notices" : "0",
     "programs" : "1",
-    "start" : "2026-05-05T11:47:16.922+02:00",
-    "statements" : "6",
+    "start" : "2026-05-05T15:06:41.775+02:00",
+    "statements" : "8",
     "units" : "1",
     "version" : "0.2",
     "warnings" : "0"
@@ -37,6 +37,6 @@
     "syntacticChecks" : "",
     "useWideningPoints" : "false",
     "wideningThreshold" : "5",
-    "workdir" : "reglisa-outputs/symbolic/test5"
+    "workdir" : "reglisa-outputs/symbolic/test12"
   }
 }
