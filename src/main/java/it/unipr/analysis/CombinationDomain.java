@@ -80,7 +80,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 		return new SymbolicAbstractDomain().satisfies(state.getSymbolic(), expression, pp, oracle)
 				.and(new Sign().satisfies(state.getSignLatticeEnv(), expression, pp, oracle));
 	}
-	
+
 	/**
 	 * Updates the symbolic state with the asSignLatticeed expression and sets the SignLattice
 	 * of {@code id} to {@link SignLattice#TOP}. SignLattice precision is recovered at guards
@@ -101,8 +101,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 			ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
 		return new CombinationDomainLattice(
 				new SymbolicAbstractDomain().assign(state.getSymbolic(), id, expression, pp, oracle),
-				state.getSignLatticeEnv().top(),
-				state.getSavedSignLatticeEnv());
+				state.getSignLatticeEnv());
 	}
 
 	/**
@@ -128,14 +127,13 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 			// (accumulated from assume calls)
 			// as the base for refinement so that guard-refined SignLattices are
 			// visible at the return node.
-			ValueEnvironment<SignLattice> refined = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSavedSignLatticeEnv());
+			ValueEnvironment<SignLattice> refined = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
 			return new CombinationDomainLattice(
 					state.getSymbolic().top(),
-					refined,
-					state.getSavedSignLatticeEnv());
+					refined);
 		}
 
-		ValueEnvironment<SignLattice> newSignLattice = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSavedSignLatticeEnv());
+		ValueEnvironment<SignLattice> newSignLattice = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
 		// Reset symbolic to top only at guard points (comparison expressions).
 		// For sub-expressions (identifiers, constants, arithmetic) the symbolic
 		// must remain intact so that the guard expression itself can still use
@@ -147,7 +145,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 		boolean isGuard = expression instanceof BinaryExpression
 				&& ((BinaryExpression) expression).getOperator() instanceof ComparisonOperator;
 
-		return new CombinationDomainLattice(isGuard ? state.getSymbolic().top() : state.getSymbolic(), newSignLattice, state.getSavedSignLatticeEnv());
+		return new CombinationDomainLattice(isGuard ? state.getSymbolic().top() : state.getSymbolic(), newSignLattice);
 	}
 
 	/**
@@ -187,9 +185,7 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 			ProgramPoint dest, SemanticOracle oracle) throws SemanticException {
 		ValueEnvironment<SignLattice> refinedSignLattices = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
 		ValueEnvironment<SignLattice> assumedSignLattices = new Sign().assume(refinedSignLattices, expression, src, dest, oracle);
-		// Save the assumed SignLattices so popScope can reconstruct the full SignLattice env
-		// at the return node.
-		return new CombinationDomainLattice(state.getSymbolic().top(), assumedSignLattices.top(), assumedSignLattices);
+		return new CombinationDomainLattice(state.getSymbolic().top(), assumedSignLattices);
 	}
 
 	@Override

@@ -34,35 +34,13 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	 */
 	private final ValueEnvironment<SignLattice> signEnv;
 
-	/**
-	 * Auxiliary SignLattice environment accumulated from {@link #assume} calls. Unlike
-	 * {@link #signEnv}, this field is NOT reset to top by {@link #asSignLattice}; only
-	 * the asSignLatticeed identifier is forgotten from it. It is used exclusively by
-	 * {@link #popScope} to reconstruct the full SignLattice environment at the return
-	 * node without exposing SignLattice information at intermediate asSignLatticement nodes.
-	 * It is intentionally excluded from {@link #equals}, {@link #hashCode}, and
-	 * {@link #lessOrEqual} so that it does not disturb fixpoint convergence.
-	 */
-	private final ValueEnvironment<SignLattice> savedSignEnv;
 
 	/**
 	 * Builds the top element of this combination domain.
 	 */
 	public CombinationDomainLattice() {
 		this(new SymbolicDomainLattice(),
-				new ValueEnvironment<SignLattice>(new SignLattice()),
 				new ValueEnvironment<SignLattice>(new SignLattice()));
-	}
-
-	/**
-	 * Builds a combination domain from the given components, with
-	 * {@code savedSignLatticeEnv} initialised to top.
-	 *
-	 * @param symbolic the symbolic component
-	 * @param SignLatticeEnv  the SignLattice environment component
-	 */
-	public CombinationDomainLattice(SymbolicDomainLattice symbolic, ValueEnvironment<SignLattice> SignLatticeEnv) {
-		this(symbolic, SignLatticeEnv, new ValueEnvironment<SignLattice>(new SignLattice()));
 	}
 
 	/**
@@ -75,11 +53,9 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	 */
 	public CombinationDomainLattice(
 			SymbolicDomainLattice symbolic,
-			ValueEnvironment<SignLattice> SignLatticeEnv,
-			ValueEnvironment<SignLattice> savedSignLatticeEnv) {
+			ValueEnvironment<SignLattice> SignLatticeEnv) {
 		this.symbolic = symbolic;
 		this.signEnv = SignLatticeEnv;
-		this.savedSignEnv = savedSignLatticeEnv;
 	}
 	
 	@Override
@@ -114,8 +90,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	public CombinationDomainLattice forgetIdentifier(Identifier id, ProgramPoint pp) throws SemanticException {
 		return new CombinationDomainLattice(
 				symbolic.forgetIdentifier(id, pp),
-				signEnv.forgetIdentifier(id, pp),
-				savedSignEnv.forgetIdentifier(id, pp));
+				signEnv.forgetIdentifier(id, pp));
 	}
 
 	/**
@@ -132,8 +107,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	public CombinationDomainLattice forgetIdentifiersIf(Predicate<Identifier> test, ProgramPoint pp) throws SemanticException {
 		return new CombinationDomainLattice(
 				symbolic.forgetIdentifiersIf(test, pp),
-				signEnv.forgetIdentifiersIf(test, pp),
-				savedSignEnv.forgetIdentifiersIf(test, pp));
+				signEnv.forgetIdentifiersIf(test, pp));
 	}
 	
 	@Override
@@ -141,8 +115,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 			throws SemanticException {
 		return new CombinationDomainLattice(
 				symbolic.forgetIdentifiers(ids, pp),
-				signEnv.forgetIdentifiers(ids, pp),
-				savedSignEnv.forgetIdentifiers(ids, pp));
+				signEnv.forgetIdentifiers(ids, pp));
 	}
 	
 	/**
@@ -174,8 +147,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	public CombinationDomainLattice pushScope(ScopeToken token, ProgramPoint pp) throws SemanticException {
 		return new CombinationDomainLattice(
 				symbolic.pushScope(token, pp),
-				signEnv.pushScope(token, pp),
-				savedSignEnv.pushScope(token, pp));
+				signEnv.pushScope(token, pp));
 	}
 
 	/**
@@ -195,7 +167,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 		// variables refined by guards (e.g. x:+ from assume(x>100)) are visible
 		// at the return node even though SignLatticeEnv was reset to TOP by the last
 		// asSignLattice.
-		ValueEnvironment<SignLattice> newSignLatticeEnv = refineSignLatticeFromSymbolic(symbolic, savedSignEnv).popScope(token, pp);
+		ValueEnvironment<SignLattice> newSignLatticeEnv = refineSignLatticeFromSymbolic(symbolic, signEnv).popScope(token, pp);
 		return new CombinationDomainLattice(newSymbolic, newSignLatticeEnv);
 	}
 	
@@ -256,9 +228,9 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	public CombinationDomainLattice lub(CombinationDomainLattice other) throws SemanticException {
 		// Keep THIS symbolic fixed (pre-loop / block-entry state).
 		// Use OTHER symbolic (block body summary) only for SignLattice refinement.
-		ValueEnvironment<SignLattice> refined = refineSignLatticeFromSymbolic(other.symbolic, other.savedSignEnv);
-		ValueEnvironment<SignLattice> lubSaved = refined.lub(other.savedSignEnv);
-		return new CombinationDomainLattice(this.symbolic, lubSaved, lubSaved);
+		ValueEnvironment<SignLattice> refined = refineSignLatticeFromSymbolic(other.symbolic, other.signEnv);
+		ValueEnvironment<SignLattice> lubSaved = refined.lub(this.signEnv);
+		return new CombinationDomainLattice(other.symbolic, lubSaved);
 	}
 
 	/**
@@ -413,14 +385,10 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	public ValueEnvironment<SignLattice> getSignLatticeEnv() {
 		return signEnv;
 	}
-	
-	public ValueEnvironment<SignLattice> getSavedSignLatticeEnv() {
-		return savedSignEnv;
-	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(signEnv, symbolic, savedSignEnv);
+		return Objects.hash(signEnv, symbolic);
 	}
 
 	@Override
@@ -433,7 +401,6 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 			return false;
 		CombinationDomainLattice other = (CombinationDomainLattice) obj;
 		return Objects.equals(signEnv, other.signEnv)
-				&& Objects.equals(symbolic, other.symbolic) 
-				&& Objects.equals(savedSignEnv, other.savedSignEnv);
+				&& Objects.equals(symbolic, other.symbolic);
 	}
 }
