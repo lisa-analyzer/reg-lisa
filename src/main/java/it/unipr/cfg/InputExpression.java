@@ -34,6 +34,7 @@ public class InputExpression extends NaryExpression {
 	public <A extends AbstractLattice<A>, D extends AbstractDomain<A>> AnalysisState<A> forwardSemanticsAux(
 			InterproceduralAnalysis<A, D> interprocedural, AnalysisState<A> state, ExpressionSet[] params,
 			StatementStore<A> expressions) throws SemanticException {
-		return interprocedural.getAnalysis().smallStepSemantics(state, new PushAny(getProgram().getTypes().getIntegerType(), getLocation()), this);
+		return interprocedural.getAnalysis().smallStepSemantics(state,
+				new PushAny(getProgram().getTypes().getIntegerType(), getLocation()), this);
 	}
 }

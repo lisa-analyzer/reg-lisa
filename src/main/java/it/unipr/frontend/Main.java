@@ -1,14 +1,5 @@
 package it.unipr.frontend;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import it.unipr.frontend.reg.RegLiSAFrontend;
 import it.unive.lisa.LiSA;
 import it.unive.lisa.analysis.SimpleAbstractDomain;
@@ -22,6 +13,14 @@ import it.unive.lisa.outputs.DotInputs;
 import it.unive.lisa.outputs.HtmlInputs;
 import it.unive.lisa.outputs.JSONReportDumper;
 import it.unive.lisa.program.Program;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Main {
 	private static final Logger log = LogManager.getLogger(Main.class);
@@ -63,11 +62,11 @@ public class Main {
 			LiSAConfiguration conf = new LiSAConfiguration();
 
 			conf.workdir = outputDir;
-			
+
 			conf.outputs.add(new JSONReportDumper());
 			if (graph.equals("DOT"))
 				conf.outputs.add(new DotInputs());
-			else 
+			else
 				conf.outputs.add(new HtmlInputs(true));
 
 			if (analysis) {

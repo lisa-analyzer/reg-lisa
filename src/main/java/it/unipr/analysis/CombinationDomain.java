@@ -9,22 +9,25 @@ import it.unive.lisa.lattices.Satisfiability;
 import it.unive.lisa.lattices.numeric.SignLattice;
 import it.unive.lisa.program.cfg.ProgramPoint;
 import it.unive.lisa.program.cfg.statement.Ret;
+import it.unive.lisa.program.cfg.statement.Statement;
 import it.unive.lisa.symbolic.value.BinaryExpression;
 import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.operator.ComparisonOperator;
 
 /**
- * A combination domain that pairs a {@link SymbolicAbstractDomain} with a SignLattice
- * analysis ({@link ValueEnvironment}{@code <}{@link SignLattice}{@code >}), using the
- * symbolic component to <em>refine</em> the SignLattice component rather than running
- * the two analyses fully independently in parallel.
+ * A combination domain that pairs a {@link SymbolicAbstractDomain} with a
+ * SignLattice analysis
+ * ({@link ValueEnvironment}{@code <}{@link SignLattice}{@code >}), using the
+ * symbolic component to <em>refine</em> the SignLattice component rather than
+ * running the two analyses fully independently in parallel.
  * <p>
  * <strong>Basic-block refinement.</strong> Within a straight-line sequence of
- * asSignLatticements, each {@code asSignLattice} updates the symbolic state and then derives
- * the SignLattice of the asSignLatticeed variable directly from the resulting symbolic
- * expression, treating every {@link SymbolicVariable} (the result of an
- * {@code input()} call) as {@link SignLattice#POS}. For example:
+ * asSignLatticements, each {@code asSignLattice} updates the symbolic state and
+ * then derives the SignLattice of the asSignLatticeed variable directly from
+ * the resulting symbolic expression, treating every {@link SymbolicVariable}
+ * (the result of an {@code input()} call) as {@link SignLattice#POS}. For
+ * example:
  * 
  * <pre>
  *   x := input()   → symbolic: x = x_sym         → SignLattice: x = +
@@ -35,13 +38,14 @@ import it.unive.lisa.symbolic.value.operator.ComparisonOperator;
  * <p>
  * <strong>Join-point refinement.</strong> At loop heads and if-then-else merge
  * points, {@link #lub} joins both components pointwise and then refines the
- * SignLattice environment using the joined symbolic state: if the symbolic join still
- * carries a concrete expression for a variable, the derived SignLattice replaces the
- * (potentially imprecise) SignLattice join for that variable. When the symbolic join
- * loses information (the expression set contains multiple alternatives after a
- * join), the refinement evaluates the SignLattice of each alternative and takes their
- * join, still potentially providing a precise result. Only when no concrete
- * SignLattice can be derived is the SignLattice join used as a fallback.
+ * SignLattice environment using the joined symbolic state: if the symbolic join
+ * still carries a concrete expression for a variable, the derived SignLattice
+ * replaces the (potentially imprecise) SignLattice join for that variable. When
+ * the symbolic join loses information (the expression set contains multiple
+ * alternatives after a join), the refinement evaluates the SignLattice of each
+ * alternative and takes their join, still potentially providing a precise
+ * result. Only when no concrete SignLattice can be derived is the SignLattice
+ * join used as a fallback.
  * <p>
  * For example, consider:
  * 
@@ -55,8 +59,8 @@ import it.unive.lisa.symbolic.value.operator.ComparisonOperator;
  * {@code y = x_sym} (both positive). At the join with the pre-if state
  * {@code x = x_sym, y = x_sym + 1} (both positive), the symbolic join yields an
  * expression set with two alternatives for each variable, but evaluating the
- * SignLattice of each alternative still gives {@link SignLattice#POS}. The SignLattice analysis thus
- * converges in one pass without losing precision.
+ * SignLattice of each alternative still gives {@link SignLattice#POS}. The
+ * SignLattice analysis thus converges in one pass without losing precision.
  *
  * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
  */
@@ -82,10 +86,11 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 	}
 
 	/**
-	 * Updates the symbolic state with the asSignLatticeed expression and sets the SignLattice
-	 * of {@code id} to {@link SignLattice#TOP}. SignLattice precision is recovered at guards
-	 * via {@link #assume}, which uses the symbolic summary to refine the SignLattice
-	 * environment. The SignLattice domain is never consulted during asSignLatticements.
+	 * Updates the symbolic state with the asSignLatticeed expression and sets
+	 * the SignLattice of {@code id} to {@link SignLattice#TOP}. SignLattice
+	 * precision is recovered at guards via {@link #assume}, which uses the
+	 * symbolic summary to refine the SignLattice environment. The SignLattice
+	 * domain is never consulted during asSignLatticements.
 	 *
 	 * @param id         the identifier being asSignLatticeed
 	 * @param expression the right-hand side expression
@@ -99,9 +104,17 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 	@Override
 	public CombinationDomainLattice assign(CombinationDomainLattice state, Identifier id, ValueExpression expression,
 			ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
-		return new CombinationDomainLattice(
-				new SymbolicAbstractDomain().assign(state.getSymbolic(), id, expression, pp, oracle),
-				state.getSignLatticeEnv());
+		boolean isJoinPoint = pp.getCFG().getIngoingEdges((Statement) pp).size() > 1;
+
+		if (isJoinPoint) {
+			return new CombinationDomainLattice(
+					new SymbolicAbstractDomain().assign(state.getSymbolic().top(), id, expression, pp, oracle),
+					state.getSignLatticeEnv());
+		} else {
+			return new CombinationDomainLattice(
+					new SymbolicAbstractDomain().assign(state.getSymbolic(), id, expression, pp, oracle),
+					state.getSignLatticeEnv());
+		}
 	}
 
 	/**
@@ -120,31 +133,40 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 	@Override
 	public CombinationDomainLattice smallStepSemantics(CombinationDomainLattice state, ValueExpression expression,
 			ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
-		if (pp instanceof Ret) {
-			// At a return node, we want to keep the SignLattice information refined by
-			// guards in the caller.
-			// Since asSignLattice resets SignLatticeEnv to top, we use savedSignLatticeEnv
-			// (accumulated from assume calls)
-			// as the base for refinement so that guard-refined SignLattices are
-			// visible at the return node.
-			ValueEnvironment<SignLattice> refined = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
-			return new CombinationDomainLattice(
-					state.getSymbolic().top(),
-					refined);
-		}
 
-		ValueEnvironment<SignLattice> newSignLattice = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
-		// Reset symbolic to top only at guard points (comparison expressions).
-		// For sub-expressions (identifiers, constants, arithmetic) the symbolic
-		// must remain intact so that the guard expression itself can still use
-		// it for refinement. smallStepSemantics is called for every sub-node,
-		// so
-		// resetting unconditionally would kill the symbolic before the
-		// comparison
-		// is evaluated.
 		boolean isGuard = expression instanceof BinaryExpression
 				&& ((BinaryExpression) expression).getOperator() instanceof ComparisonOperator;
 
+		boolean isJoinPoint = pp.getCFG().getIngoingEdges((Statement) pp).size() > 1;
+
+		if (pp instanceof Ret) {
+			// At a return node, we want to keep the SignLattice information
+			// refined by
+			// guards in the caller.
+			// Since asSignLattice resets SignLatticeEnv to top, we use
+			// savedSignLatticeEnv
+			// (accumulated from assume calls)
+			// as the base for refinement so that guard-refined SignLattices are
+			// visible at the return node.
+			if (isJoinPoint) {
+				return new CombinationDomainLattice(state.getSymbolic().top(), state.getSignLatticeEnv());
+			} else {
+				ValueEnvironment<SignLattice> refined = CombinationDomainLattice
+						.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
+				return new CombinationDomainLattice(
+						state.getSymbolic().top(),
+						refined);
+			}
+		}
+
+		if (isJoinPoint && !isGuard) {
+			return new CombinationDomainLattice(state.getSymbolic().top(), state.getSignLatticeEnv());
+		} else if (!isGuard) {
+			return state;
+		}
+
+		ValueEnvironment<SignLattice> newSignLattice = CombinationDomainLattice
+				.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
 		return new CombinationDomainLattice(isGuard ? state.getSymbolic().top() : state.getSymbolic(), newSignLattice);
 	}
 
@@ -156,10 +178,11 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 	 * <li>The SignLattice domain's own {@code assume} is applied first for
 	 * condition-driven SignLattice constraints (e.g., {@code x > 0} → x is
 	 * positive).</li>
-	 * <li>The current symbolic state is then used to further refine the SignLattice
-	 * environment via {@link #refineSignLatticeFromSymbolic}: any variable whose
-	 * symbolic expression evaluates to a concrete SignLattice (given that all
-	 * {@link SymbolicVariable}s are positive) has its SignLattice overridden.</li>
+	 * <li>The current symbolic state is then used to further refine the
+	 * SignLattice environment via {@link #refineSignLatticeFromSymbolic}: any
+	 * variable whose symbolic expression evaluates to a concrete SignLattice
+	 * (given that all {@link SymbolicVariable}s are positive) has its
+	 * SignLattice overridden.</li>
 	 * <li>After refinement the symbolic component is reset to
 	 * {@link SymbolicAbstractDomain#top() top}: it has served its purpose for
 	 * this block. The SignLattice environment carries the refined information
@@ -167,9 +190,9 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 	 * </ol>
 	 * <p>
 	 * This implements the "blocks output symbolic things used by guards to
-	 * refine SignLattices" contract: a block builds up exact symbolic expressions; the
-	 * guard (assume) consumes them to improve SignLattice precision; and the symbolic
-	 * is discarded so the next block starts fresh.
+	 * refine SignLattices" contract: a block builds up exact symbolic
+	 * expressions; the guard (assume) consumes them to improve SignLattice
+	 * precision; and the symbolic is discarded so the next block starts fresh.
 	 *
 	 * @param expression the assumed boolean expression
 	 * @param src        the source program point of the guarded edge
@@ -183,8 +206,10 @@ public class CombinationDomain implements ValueDomain<CombinationDomainLattice> 
 	@Override
 	public CombinationDomainLattice assume(CombinationDomainLattice state, ValueExpression expression, ProgramPoint src,
 			ProgramPoint dest, SemanticOracle oracle) throws SemanticException {
-		ValueEnvironment<SignLattice> refinedSignLattices = CombinationDomainLattice.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
-		ValueEnvironment<SignLattice> assumedSignLattices = new Sign().assume(refinedSignLattices, expression, src, dest, oracle);
+		ValueEnvironment<SignLattice> refinedSignLattices = CombinationDomainLattice
+				.refineSignLatticeFromSymbolic(state.getSymbolic(), state.getSignLatticeEnv());
+		ValueEnvironment<SignLattice> assumedSignLattices = new Sign().assume(refinedSignLattices, expression, src,
+				dest, oracle);
 		return new CombinationDomainLattice(state.getSymbolic().top(), assumedSignLattices);
 	}
 

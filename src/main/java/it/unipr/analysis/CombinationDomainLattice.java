@@ -1,8 +1,5 @@
 package it.unipr.analysis;
 
-import java.util.Objects;
-import java.util.function.Predicate;
-
 import it.unive.lisa.analysis.Lattice;
 import it.unive.lisa.analysis.ScopeToken;
 import it.unive.lisa.analysis.SemanticException;
@@ -18,6 +15,8 @@ import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.operator.MultiplicationOperator;
 import it.unive.lisa.util.representation.StringRepresentation;
 import it.unive.lisa.util.representation.StructuredRepresentation;
+import java.util.Objects;
+import java.util.function.Predicate;
 
 public class CombinationDomainLattice implements ValueLattice<CombinationDomainLattice> {
 
@@ -28,12 +27,12 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	private final SymbolicDomainLattice symbolic;
 
 	/**
-	 * The SignLattice component, recording the SignLattice (positive, negative, zero) of each
-	 * program variable. It is kept consistent with the symbolic component via
-	 * the refinement operators in {@link #asSignLattice} and {@link #lub}.
+	 * The SignLattice component, recording the SignLattice (positive, negative,
+	 * zero) of each program variable. It is kept consistent with the symbolic
+	 * component via the refinement operators in {@link #asSignLattice} and
+	 * {@link #lub}.
 	 */
 	private final ValueEnvironment<SignLattice> signEnv;
-
 
 	/**
 	 * Builds the top element of this combination domain.
@@ -46,10 +45,11 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	/**
 	 * Builds a combination domain from all three components.
 	 *
-	 * @param symbolic     the symbolic component
+	 * @param symbolic            the symbolic component
 	 * @param SignLatticeEnv      the SignLattice environment component
-	 * @param savedSignLatticeEnv the auxiliary SignLattice environment accumulated from
-	 *                         assume calls (used only at {@link #popScope})
+	 * @param savedSignLatticeEnv the auxiliary SignLattice environment
+	 *                                accumulated from assume calls (used only
+	 *                                at {@link #popScope})
 	 */
 	public CombinationDomainLattice(
 			SymbolicDomainLattice symbolic,
@@ -57,7 +57,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 		this.symbolic = symbolic;
 		this.signEnv = SignLatticeEnv;
 	}
-	
+
 	@Override
 	public CombinationDomainLattice store(Identifier target, Identifier source) throws SemanticException {
 		// TODO Auto-generated method stub
@@ -65,8 +65,8 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	}
 
 	/**
-	 * Returns {@code true} if either the symbolic or the SignLattice component tracks
-	 * a binding for {@code id}.
+	 * Returns {@code true} if either the symbolic or the SignLattice component
+	 * tracks a binding for {@code id}.
 	 *
 	 * @param id the identifier to query
 	 *
@@ -104,12 +104,13 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	 * @throws SemanticException if an error occurs
 	 */
 	@Override
-	public CombinationDomainLattice forgetIdentifiersIf(Predicate<Identifier> test, ProgramPoint pp) throws SemanticException {
+	public CombinationDomainLattice forgetIdentifiersIf(Predicate<Identifier> test, ProgramPoint pp)
+			throws SemanticException {
 		return new CombinationDomainLattice(
 				symbolic.forgetIdentifiersIf(test, pp),
 				signEnv.forgetIdentifiersIf(test, pp));
 	}
-	
+
 	@Override
 	public CombinationDomainLattice forgetIdentifiers(Iterable<Identifier> ids, ProgramPoint pp)
 			throws SemanticException {
@@ -117,7 +118,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 				symbolic.forgetIdentifiers(ids, pp),
 				signEnv.forgetIdentifiers(ids, pp));
 	}
-	
+
 	/**
 	 * Returns a structured representation of this domain, printing the symbolic
 	 * state and the SignLattice environment on separate labelled sections.
@@ -163,17 +164,20 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	@Override
 	public CombinationDomainLattice popScope(ScopeToken token, ProgramPoint pp) throws SemanticException {
 		SymbolicDomainLattice newSymbolic = symbolic.popScope(token, pp);
-		// Use savedSignLatticeEnv (accumulated from assume calls) as the base so that
+		// Use savedSignLatticeEnv (accumulated from assume calls) as the base
+		// so that
 		// variables refined by guards (e.g. x:+ from assume(x>100)) are visible
-		// at the return node even though SignLatticeEnv was reset to TOP by the last
+		// at the return node even though SignLatticeEnv was reset to TOP by the
+		// last
 		// asSignLattice.
-		ValueEnvironment<SignLattice> newSignLatticeEnv = refineSignLatticeFromSymbolic(symbolic, signEnv).popScope(token, pp);
+		ValueEnvironment<
+				SignLattice> newSignLatticeEnv = refineSignLatticeFromSymbolic(symbolic, signEnv).popScope(token, pp);
 		return new CombinationDomainLattice(newSymbolic, newSignLatticeEnv);
 	}
-	
+
 	/**
-	 * Returns {@code true} if both the symbolic and SignLattice components are less
-	 * than or equal to the corresponding components of {@code other}.
+	 * Returns {@code true} if both the symbolic and SignLattice components are
+	 * less than or equal to the corresponding components of {@code other}.
 	 *
 	 * @param other the element to compare against
 	 *
@@ -209,14 +213,15 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	 * {@code this.symbolic} fixed, the symbolic stays stable across all loop
 	 * iterations.
 	 * <p>
-	 * <strong>SignLattice refinement.</strong> The SignLattice environment is joined normally
-	 * (pointwise {@link SignLattice} join), and then refined using
-	 * {@code other.symbolic} — the block body's symbolic summary. This yields a
-	 * more precise SignLattice than the SignLattice domain's own join would produce, because
-	 * the symbolic summary carries exact linear-form information. For programs
-	 * where every body expression has a stable SignLattice (e.g. all expressions
-	 * remain positive), the refined SignLattice at the loop head equals the pre-loop
-	 * SignLattice, and the fixpoint is reached in one pass.
+	 * <strong>SignLattice refinement.</strong> The SignLattice environment is
+	 * joined normally (pointwise {@link SignLattice} join), and then refined
+	 * using {@code other.symbolic} — the block body's symbolic summary. This
+	 * yields a more precise SignLattice than the SignLattice domain's own join
+	 * would produce, because the symbolic summary carries exact linear-form
+	 * information. For programs where every body expression has a stable
+	 * SignLattice (e.g. all expressions remain positive), the refined
+	 * SignLattice at the loop head equals the pre-loop SignLattice, and the
+	 * fixpoint is reached in one pass.
 	 *
 	 * @param other the element to join with
 	 *
@@ -227,9 +232,11 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	@Override
 	public CombinationDomainLattice lub(CombinationDomainLattice other) throws SemanticException {
 		// Keep THIS symbolic fixed (pre-loop / block-entry state).
-		// Use OTHER symbolic (block body summary) only for SignLattice refinement.
-		ValueEnvironment<SignLattice> refined = refineSignLatticeFromSymbolic(other.symbolic, other.signEnv);
-		ValueEnvironment<SignLattice> lubSaved = refined.lub(this.signEnv);
+		// Use OTHER symbolic (block body summary) only for SignLattice
+		// refinement.
+		ValueEnvironment<SignLattice> refinedOther = refineSignLatticeFromSymbolic(other.symbolic, other.signEnv);
+		ValueEnvironment<SignLattice> refinedThis = refineSignLatticeFromSymbolic(this.symbolic, this.signEnv);
+		ValueEnvironment<SignLattice> lubSaved = refinedOther.lub(refinedThis);
 		return new CombinationDomainLattice(other.symbolic, lubSaved);
 	}
 
@@ -273,21 +280,23 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 	public boolean isBottom() {
 		return symbolic.isBottom() || signEnv.isBottom();
 	}
-	
+
 	/**
-	 * Refines {@code base} by re-deriving the SignLattice of each variable tracked in
-	 * {@code sym} from its symbolic expression set. For variables whose
-	 * expression set contains multiple alternatives (as can happen after a
-	 * {@link #lub}), the refinement SignLattice is the join of the SignLattices of all
-	 * alternatives. Plain {@link Identifier} nodes inside symbolic expressions
-	 * (ordinary program variables that appear after an {@code assume} reset)
-	 * are resolved by looking up their SignLattice in {@code base}. If the resulting
-	 * SignLattice is top (no improvement over the fallback SignLattice join), or bottom
-	 * (empty expression set), the binding in {@code base} is left unchanged.
+	 * Refines {@code base} by re-deriving the SignLattice of each variable
+	 * tracked in {@code sym} from its symbolic expression set. For variables
+	 * whose expression set contains multiple alternatives (as can happen after
+	 * a {@link #lub}), the refinement SignLattice is the join of the
+	 * SignLattices of all alternatives. Plain {@link Identifier} nodes inside
+	 * symbolic expressions (ordinary program variables that appear after an
+	 * {@code assume} reset) are resolved by looking up their SignLattice in
+	 * {@code base}. If the resulting SignLattice is top (no improvement over
+	 * the fallback SignLattice join), or bottom (empty expression set), the
+	 * binding in {@code base} is left unchanged.
 	 *
 	 * @param sym  the symbolic state to use for refinement
-	 * @param base the SignLattice environment to refine (typically the result of a
-	 *                 SignLattice join); also used to resolve plain identifier SignLattices
+	 * @param base the SignLattice environment to refine (typically the result
+	 *                 of a SignLattice join); also used to resolve plain
+	 *                 identifier SignLattices
 	 *
 	 * @return the refined SignLattice environment
 	 *
@@ -311,29 +320,32 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 			// Only override the SignLattice join if we obtained something more
 			// concrete.
 //			if (!derived.isTop() && !derived.isBottom())
-				result = result.putState(id, derived);
+			result = result.putState(id, derived);
 		}
 		return result;
 	}
-	
+
 	/**
 	 * Derives a {@link SignLattice} value from a symbolic expression.
 	 * {@link SymbolicVariable} nodes (results of {@code input()},
 	 * {@code inputPos()}, or {@code inputNeg()}) are resolved by querying
-	 * {@code sym}'s path condition: if {@code x_sym > 0} is recorded, the SignLattice
-	 * is {@link SignLattice#POS}; if {@code x_sym < 0}, it is {@link SignLattice#NEG};
-	 * otherwise (plain {@code input()}) the SignLattice defaults to {@link SignLattice#POS}.
-	 * Plain {@link Identifier} nodes are resolved via {@code SignLatticeEnv}.
-	 * {@link BinaryExpression} nodes are evaluated recursively using
+	 * {@code sym}'s path condition: if {@code x_sym > 0} is recorded, the
+	 * SignLattice is {@link SignLattice#POS}; if {@code x_sym < 0}, it is
+	 * {@link SignLattice#NEG}; otherwise (plain {@code input()}) the
+	 * SignLattice defaults to {@link SignLattice#POS}. Plain {@link Identifier}
+	 * nodes are resolved via {@code SignLatticeEnv}. {@link BinaryExpression}
+	 * nodes are evaluated recursively using
 	 * {@link SignLattice#evalBinaryExpression}.
 	 *
-	 * @param expr    the symbolic expression to evaluate
-	 * @param SignLatticeEnv the SignLattice environment used to resolve plain identifiers;
-	 *                    may be {@code null}
-	 * @param sym     the symbolic state whose path condition constrains
-	 *                    {@link SymbolicVariable} SignLattices; may be {@code null}
+	 * @param expr           the symbolic expression to evaluate
+	 * @param SignLatticeEnv the SignLattice environment used to resolve plain
+	 *                           identifiers; may be {@code null}
+	 * @param sym            the symbolic state whose path condition constrains
+	 *                           {@link SymbolicVariable} SignLattices; may be
+	 *                           {@code null}
 	 *
-	 * @return the derived SignLattice, or {@link SignLattice#TOP} if it cannot be determined
+	 * @return the derived SignLattice, or {@link SignLattice#TOP} if it cannot
+	 *             be determined
 	 */
 	private static SignLattice deriveSignLatticeFromExpr(
 			SymbolicExpression expr,
@@ -347,7 +359,7 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 			}
 			return SignLattice.TOP;
 		}
-		
+
 		if (expr instanceof SymbolicVariable) {
 			if (sym != null) {
 				SignLattice s = sym.getSignOf((SymbolicVariable) expr);
@@ -355,26 +367,28 @@ public class CombinationDomainLattice implements ValueLattice<CombinationDomainL
 			}
 			return SignLattice.POS;
 		}
-		
+
 		if (expr instanceof Identifier) {
 			if (SignLatticeEnv != null)
 				return SignLatticeEnv.getState((Identifier) expr);
 			return SignLattice.TOP;
 		}
-		
+
 		if (expr instanceof BinaryExpression) {
 			BinaryExpression bin = (BinaryExpression) expr;
 			SignLattice left = deriveSignLatticeFromExpr(bin.getLeft(), SignLatticeEnv, sym);
 			SignLattice right = deriveSignLatticeFromExpr(bin.getRight(), SignLatticeEnv, sym);
-			
+
 			// FIXME: LiSA Bug in multiplication
-			if ((left.isTop() && right.isNegative() || right.isTop() && left.isNegative()) && bin.getOperator() instanceof MultiplicationOperator)
+			if ((left.isTop() && right.isNegative() || right.isTop() && left.isNegative())
+					&& bin.getOperator() instanceof MultiplicationOperator)
 				return SignLattice.TOP;
-			else if ((left.isTop() && right.isPositive() || right.isTop() && left.isPositive()) && bin.getOperator() instanceof MultiplicationOperator)
+			else if ((left.isTop() && right.isPositive() || right.isTop() && left.isPositive())
+					&& bin.getOperator() instanceof MultiplicationOperator)
 				return SignLattice.TOP;
 			return new Sign().evalBinaryExpression(bin, left, right, null, null);
 		}
-		
+
 		return SignLattice.TOP;
 	}
 

@@ -1,7 +1,3 @@
-import java.io.IOException;
-
-import org.junit.Test;
-
 import it.unipr.analysis.CombinationDomain;
 import it.unive.lisa.AnalysisSetupException;
 import it.unive.lisa.analysis.SimpleAbstractDomain;
@@ -12,6 +8,8 @@ import it.unive.lisa.interprocedural.callgraph.RTACallGraph;
 import it.unive.lisa.outputs.HtmlResults;
 import it.unive.lisa.outputs.JSONReportDumper;
 import it.unive.lisa.outputs.JSONResults;
+import java.io.IOException;
+import org.junit.Test;
 
 public class SymbolicTest extends RegLiSAAnalysisExecutor {
 
@@ -21,7 +19,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		conf.programFile = "example.reg";
 		conf.analysis = new SimpleAbstractDomain<>(new MonolithicHeap(), new CombinationDomain(),
 				new InferredTypes());
-		
+
 		conf.outputs.add(new JSONReportDumper());
 		conf.outputs.add(new JSONResults<>());
 		conf.useWideningPoints = false;
@@ -60,7 +58,6 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	@Test
 	public void testSymbolic4() throws AnalysisSetupException, IOException {
 		CronConfiguration conf = createConfiguration("test4", false);
-		conf.forceUpdate = true;
 		perform(conf);
 	}
 
@@ -114,19 +111,19 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 
 	@Test
 	public void testSymbolic13() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test13", true);
+		CronConfiguration conf = createConfiguration("test13", false);
 		perform(conf);
 	}
 
 	@Test
 	public void testSymbolic14() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test14", true);
+		CronConfiguration conf = createConfiguration("test14", false);
 		perform(conf);
 	}
 
 	@Test
 	public void testSymbolic15() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test15", true);
+		CronConfiguration conf = createConfiguration("test15", false);
 		perform(conf);
 	}
 

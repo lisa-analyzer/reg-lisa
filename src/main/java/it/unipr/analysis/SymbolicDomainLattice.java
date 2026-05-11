@@ -1,10 +1,5 @@
 package it.unipr.analysis;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Predicate;
-
 import it.unive.lisa.analysis.ScopeToken;
 import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.value.ValueLattice;
@@ -25,6 +20,10 @@ import it.unive.lisa.symbolic.value.operator.binary.LogicalAnd;
 import it.unive.lisa.type.Untyped;
 import it.unive.lisa.util.representation.StringRepresentation;
 import it.unive.lisa.util.representation.StructuredRepresentation;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
 
 public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice> {
 	/**
@@ -69,10 +68,11 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 		this.pathCondition = pathCondition;
 		this.symbolicState = symbolicState;
 	}
-	
+
 	@Override
 	public SymbolicDomainLattice store(Identifier target, Identifier source) throws SemanticException {
-		return new SymbolicDomainLattice(pathCondition, this.symbolicState.putState(target, this.symbolicState.getState(source)));
+		return new SymbolicDomainLattice(pathCondition,
+				this.symbolicState.putState(target, this.symbolicState.getState(source)));
 	}
 
 	/**
@@ -90,7 +90,6 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 			return false;
 		return symbolicState.function != null && symbolicState.function.containsKey(id);
 	}
-
 
 	/**
 	 * Returns a copy of this symbolic state with the binding for {@code id}
@@ -129,7 +128,8 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 	 * @throws SemanticException if an error occurs while computing the result
 	 */
 	@Override
-	public SymbolicDomainLattice forgetIdentifiersIf(Predicate<Identifier> test, ProgramPoint pp) throws SemanticException {
+	public SymbolicDomainLattice forgetIdentifiersIf(Predicate<Identifier> test, ProgramPoint pp)
+			throws SemanticException {
 		if (isTop() || isBottom())
 			return this;
 		if (symbolicState.function == null)
@@ -147,7 +147,6 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 			result = result.forgetIdentifier(id, pp);
 		return result;
 	}
-
 
 	/**
 	 * Checks whether this abstract element is less than or equal to
@@ -172,7 +171,6 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 			return false;
 		return symbolicState.lessOrEqual(other.symbolicState);
 	}
-
 
 	/**
 	 * Computes the least upper bound of this abstract element and
@@ -247,7 +245,7 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 	public boolean isBottom() {
 		return this.symbolicState.isBottom();
 	}
-	
+
 	/**
 	 * Returns a {@link StructuredRepresentation} of this symbolic state as a
 	 * string containing the string representation of the underlying functional
@@ -365,8 +363,6 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 	public GenericMapLattice<Identifier, ExpressionSet> getSymbolicState() {
 		return symbolicState;
 	}
-	
-
 
 	/**
 	 * Returns the set of identifiers currently tracked in this symbolic state.
@@ -378,8 +374,6 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 	public Set<Identifier> getKeys() {
 		return symbolicState.getKeys();
 	}
-	
-
 
 	/**
 	 * Returns the symbolic expression associated with {@code id} in this
@@ -399,7 +393,7 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 			throw new IllegalStateException("Multiple symbolic expressions for identifier " + id);
 		return set.elements.iterator().next();
 	}
-	
+
 	/**
 	 * Returns the sign of a {@link SymbolicVariable} as recorded in the path
 	 * condition, or {@link it.unive.lisa.analysis.numeric.Sign#TOP} if no

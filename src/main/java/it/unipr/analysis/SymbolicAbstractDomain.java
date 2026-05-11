@@ -1,9 +1,5 @@
 package it.unipr.analysis;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 import it.unive.lisa.analysis.SemanticException;
 import it.unive.lisa.analysis.SemanticOracle;
 import it.unive.lisa.analysis.value.ValueDomain;
@@ -27,6 +23,9 @@ import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingDiv;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingMul;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingSub;
 import it.unive.lisa.type.Untyped;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * A symbolic abstract domain that tracks, for each program variable, a symbolic
@@ -178,9 +177,6 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 		return result;
 	}
 
-	
-
-
 	/**
 	 * Tries to reduce {@code expr} to a {@link LinearCombination}. Returns
 	 * {@link Optional#empty()} whenever the expression is non-linear (e.g.,
@@ -274,9 +270,9 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 	 * simplified to canonical linear form via
 	 * {@link #simplify(SymbolicExpression)}.
 	 * </ol>
-	 * @param state 
-	 *
-	 * @param expr the symbolic expression to evaluate
+	 * 
+	 * @param state
+	 * @param expr  the symbolic expression to evaluate
 	 *
 	 * @return the evaluated symbolic expression
 	 */
@@ -310,7 +306,6 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 
 		return expr;
 	}
-
 
 	@Override
 	public SymbolicDomainLattice assign(SymbolicDomainLattice state, Identifier id, ValueExpression expression,
