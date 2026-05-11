@@ -60,6 +60,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	@Test
 	public void testSymbolic4() throws AnalysisSetupException, IOException {
 		CronConfiguration conf = createConfiguration("test4", false);
+		conf.forceUpdate = true;
 		perform(conf);
 	}
 
@@ -83,13 +84,13 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 
 	@Test
 	public void testSymbolic8() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test8", true);
+		CronConfiguration conf = createConfiguration("test8", false);
 		perform(conf);
 	}
 
 	@Test
 	public void testSymbolic9() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("test9", true);
+		CronConfiguration conf = createConfiguration("test9", false);
 		perform(conf);
 	}
 
@@ -108,6 +109,42 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	@Test
 	public void testSymbolic12() throws AnalysisSetupException, IOException {
 		CronConfiguration conf = createConfiguration("test12", false);
+		perform(conf);
+	}
+
+	@Test
+	public void testSymbolic13() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test13", true);
+		perform(conf);
+	}
+
+	@Test
+	public void testSymbolic14() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test14", true);
+		perform(conf);
+	}
+
+	@Test
+	public void testSymbolic15() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test15", true);
+		perform(conf);
+	}
+
+	@Test
+	public void testSymbolic16() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test16", false);
+		perform(conf);
+	}
+
+	@Test
+	public void testSymbolic17() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test17", false);
+		perform(conf);
+	}
+
+	@Test
+	public void testSymbolic18() throws AnalysisSetupException, IOException {
+		CronConfiguration conf = createConfiguration("test18", false);
 		perform(conf);
 	}
 }
