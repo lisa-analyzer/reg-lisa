@@ -1,0 +1,42 @@
+{
+  "warnings" : [ ],
+  "notices" : [ ],
+  "files" : [ "report.json", "untyped_program.function().graph.json" ],
+  "info" : {
+    "cfgs" : "1",
+    "duration" : "117ms",
+    "end" : "2026-05-13T15:05:05.994+02:00",
+    "expressions" : "88",
+    "files" : "1",
+    "globals" : "0",
+    "members" : "1",
+    "notices" : "0",
+    "programs" : "1",
+    "start" : "2026-05-13T15:05:05.877+02:00",
+    "statements" : "18",
+    "units" : "1",
+    "version" : "0.2",
+    "warnings" : "0"
+  },
+  "configuration" : {
+    "asynchronousListeners" : "",
+    "backwardDescendingFixpoint" : "unset",
+    "backwardFixpoint" : "BackwardAscendingFixpoint",
+    "dumpForcesUnwinding" : "false",
+    "fixpointWorkingSet" : "OrderBasedWorkingSet",
+    "forwardDescendingFixpoint" : "unset",
+    "forwardFixpoint" : "ForwardAscendingFixpoint",
+    "glbThreshold" : "5",
+    "hotspots" : "unset",
+    "openCallPolicy" : "TopExecutionPolicy",
+    "outputs" : "JSONReportDumper, JSONReportDumper, JSONResults",
+    "recursionWideningThreshold" : "5",
+    "semanticChecks" : "",
+    "shouldSmashError" : "unset",
+    "synchronousListeners" : "",
+    "syntacticChecks" : "",
+    "useWideningPoints" : "false",
+    "wideningThreshold" : "5",
+    "workdir" : "reglisa-outputs/symbolic/simpleNN"
+  }
+}

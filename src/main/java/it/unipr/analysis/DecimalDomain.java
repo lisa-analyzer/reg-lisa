@@ -64,6 +64,8 @@ public class DecimalDomain
 			PushAny pushAny,
 			ProgramPoint pp,
 			SemanticOracle oracle) {
+		if (pushAny instanceof PushIntv)
+			return new DecimalInterval(new MathNumber(0.0), new MathNumber(1.0));
 		return DecimalInterval.TOP;
 	}
 
