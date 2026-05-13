@@ -4,13 +4,17 @@ import static it.unipr.frontend.reg.Antlr4Utils.getCol;
 import static it.unipr.frontend.reg.Antlr4Utils.getLine;
 
 import it.unipr.cfg.InputExpression;
+import it.unipr.cfg.InputIntvExpression;
 import it.unipr.cfg.InputNegExpression;
 import it.unipr.cfg.InputPosExpression;
+import it.unipr.cfg.ReluExpression;
 import it.unipr.reg.antlr.RegLexer;
 import it.unipr.reg.antlr.RegParser;
 import it.unipr.reg.antlr.RegParser.InputContext;
+import it.unipr.reg.antlr.RegParser.InputIntvContext;
 import it.unipr.reg.antlr.RegParser.InputNegContext;
 import it.unipr.reg.antlr.RegParser.InputPosContext;
+import it.unipr.reg.antlr.RegParser.ReluContext;
 import it.unipr.reg.antlr.RegParser.Unary_minusContext;
 import it.unipr.reg.antlr.RegParserBaseVisitor;
 import it.unive.lisa.program.ClassUnit;
@@ -676,6 +680,19 @@ public class RegLiSAFrontend extends RegParserBaseVisitor<Object> {
 	@Override
 	public Object visitInputNeg(InputNegContext ctx) {
 		return new InputNegExpression(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)));
+	}
+
+	@Override
+	public Object visitInputIntv(InputIntvContext ctx) {
+		return new InputIntvExpression(currentCFG, new SourceCodeLocation(file, getLine(ctx), getCol(ctx)));
+	}
+
+	@Override
+	public Object visitRelu(ReluContext ctx) {
+		SourceCodeLocation loc = new SourceCodeLocation(file, getLine(ctx), getCol(ctx));
+		Expression arg = (Expression) visit(ctx.a());
+		ReluExpression relu = new ReluExpression(currentCFG, loc, arg);
+		return Pair.of(relu, relu);
 	}
 
 	/**

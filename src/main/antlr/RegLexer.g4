@@ -36,6 +36,10 @@ NUM
    : [0-9]+
    ;
 
+RELU
+   : 'ReLu'
+   ;
+
 ID
    : [a-zA-Z] [a-zA-Z0-9]*
    ;
@@ -94,6 +98,10 @@ INPUTPOS
 
 INPUTNEG
    : 'inputNeg' LPAR RPAR
+   ;
+
+INPUTINTV
+   : 'inputIntv' LPAR RPAR
    ;
 
 WS

@@ -28,12 +28,12 @@ class LinearCombination {
 	/**
 	 * Maps each {@link Variable} to its non-zero integer coefficient.
 	 */
-	final Map<Variable, Integer> coefficients;
+	final Map<Variable, Float> coefficients;
 
 	/**
 	 * The integer constant term {@code k} of the linear combination.
 	 */
-	final int constantTerm;
+	final float constantTerm;
 
 	/**
 	 * Builds a linear combination with the given coefficients map and constant
@@ -43,8 +43,8 @@ class LinearCombination {
 	 * @param constantTerm the integer constant term
 	 */
 	private LinearCombination(
-			Map<Variable, Integer> coefficients,
-			int constantTerm) {
+			Map<Variable, Float> coefficients,
+			float constantTerm) {
 		this.coefficients = coefficients;
 		this.constantTerm = constantTerm;
 	}
@@ -58,7 +58,7 @@ class LinearCombination {
 	 * @return a new {@link LinearCombination} with no variable terms and
 	 *             constant term {@code k}
 	 */
-	static LinearCombination ofConstant(int k) {
+	static LinearCombination ofConstant(float k) {
 		return new LinearCombination(new LinkedHashMap<>(), k);
 	}
 
@@ -71,8 +71,8 @@ class LinearCombination {
 	 * @return a new {@link LinearCombination} equal to {@code 1 * v}
 	 */
 	static LinearCombination ofVariable(Variable v) {
-		Map<Variable, Integer> m = new LinkedHashMap<>();
-		m.put(v, 1);
+		Map<Variable, Float> m = new LinkedHashMap<>();
+		m.put(v, (float) 1);
 		return new LinearCombination(m, 0);
 	}
 
@@ -94,9 +94,9 @@ class LinearCombination {
 	 * @return the sum of this combination and {@code other}
 	 */
 	LinearCombination add(LinearCombination other) {
-		Map<Variable, Integer> merged = new LinkedHashMap<>(this.coefficients);
-		for (Map.Entry<Variable, Integer> e : other.coefficients.entrySet())
-			merged.merge(e.getKey(), e.getValue(), Integer::sum);
+		Map<Variable, Float> merged = new LinkedHashMap<>(this.coefficients);
+		for (Map.Entry<Variable, Float> e : other.coefficients.entrySet())
+			merged.merge(e.getKey(), e.getValue(), Float::sum);
 		merged.entrySet().removeIf(e -> e.getValue() == 0);
 		return new LinearCombination(merged, this.constantTerm + other.constantTerm);
 	}
@@ -109,9 +109,9 @@ class LinearCombination {
 	 * @return the difference of this combination and {@code other}
 	 */
 	LinearCombination sub(LinearCombination other) {
-		Map<Variable, Integer> merged = new LinkedHashMap<>(this.coefficients);
-		for (Map.Entry<Variable, Integer> e : other.coefficients.entrySet())
-			merged.merge(e.getKey(), -e.getValue(), Integer::sum);
+		Map<Variable, Float> merged = new LinkedHashMap<>(this.coefficients);
+		for (Map.Entry<Variable, Float> e : other.coefficients.entrySet())
+			merged.merge(e.getKey(), -e.getValue(), Float::sum);
 		merged.entrySet().removeIf(e -> e.getValue() == 0);
 		return new LinearCombination(merged, this.constantTerm - other.constantTerm);
 	}
@@ -123,11 +123,11 @@ class LinearCombination {
 	 *
 	 * @return this combination scaled by {@code factor}
 	 */
-	LinearCombination scale(int factor) {
+	LinearCombination scale(float factor) {
 		if (factor == 0)
 			return ofConstant(0);
-		Map<Variable, Integer> scaled = new LinkedHashMap<>();
-		for (Map.Entry<Variable, Integer> e : this.coefficients.entrySet())
+		Map<Variable, Float> scaled = new LinkedHashMap<>();
+		for (Map.Entry<Variable, Float> e : this.coefficients.entrySet())
 			scaled.put(e.getKey(), e.getValue() * factor);
 		return new LinearCombination(scaled, this.constantTerm * factor);
 	}
@@ -141,10 +141,10 @@ class LinearCombination {
 	 *
 	 * @return this combination divided by {@code divisor}
 	 */
-	LinearCombination divideBy(int divisor) {
-		Map<Variable, Integer> divided = new LinkedHashMap<>();
-		for (Map.Entry<Variable, Integer> e : this.coefficients.entrySet()) {
-			int newCoeff = e.getValue() / divisor;
+	LinearCombination divideBy(float divisor) {
+		Map<Variable, Float> divided = new LinkedHashMap<>();
+		for (Map.Entry<Variable, Float> e : this.coefficients.entrySet()) {
+			float newCoeff = e.getValue() / divisor;
 			if (newCoeff != 0)
 				divided.put(e.getKey(), newCoeff);
 		}
@@ -174,7 +174,7 @@ class LinearCombination {
 	SymbolicExpression toExpression(
 			Type type,
 			it.unive.lisa.program.cfg.CodeLocation loc) {
-		List<Map.Entry<Variable, Integer>> entries = new ArrayList<>(coefficients.entrySet());
+		List<Map.Entry<Variable, Float>> entries = new ArrayList<>(coefficients.entrySet());
 
 		// Deterministic ordering: sort by variable string representation
 		entries.sort((e1, e2) -> e1.getKey().toString().compareTo(e2.getKey().toString()));
@@ -188,7 +188,7 @@ class LinearCombination {
 		// Chain remaining variable terms
 		for (int i = 1; i < entries.size(); i++) {
 			Variable var = entries.get(i).getKey();
-			int coeff = entries.get(i).getValue();
+			float coeff = entries.get(i).getValue();
 			if (coeff > 0) {
 				SymbolicExpression term = buildTerm(var, coeff, type, loc);
 				result = new BinaryExpression(type, result, term, NumericNonOverflowingAdd.INSTANCE, loc);
@@ -226,7 +226,7 @@ class LinearCombination {
 	 */
 	private SymbolicExpression buildTerm(
 			Variable var,
-			int coeff,
+			float coeff,
 			Type type,
 			it.unive.lisa.program.cfg.CodeLocation loc) {
 		if (coeff == 1)

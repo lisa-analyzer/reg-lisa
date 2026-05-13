@@ -15,9 +15,13 @@ import it.unive.lisa.symbolic.value.PushAny;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.Variable;
 import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
+import it.unive.lisa.lattices.numeric.SignLattice;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonGe;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonGt;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonLe;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonLt;
 import it.unive.lisa.symbolic.value.operator.binary.LogicalAnd;
+import it.unive.lisa.symbolic.value.operator.binary.NumericMax;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingAdd;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingDiv;
 import it.unive.lisa.symbolic.value.operator.binary.NumericNonOverflowingMul;
@@ -125,7 +129,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 						&& bin.getRight() instanceof Constant
 						&& ((Constant) bin.getRight()).getValue() instanceof Number) {
 					SymbolicExpression var = bin.getLeft();
-					int k = ((Number) ((Constant) bin.getRight()).getValue()).intValue();
+					float k = ((Number) ((Constant) bin.getRight()).getValue()).floatValue();
 
 					// Find existing entry for this variable
 					Object[] entry = null;
@@ -141,11 +145,11 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 
 					if (op instanceof ComparisonGt) {
 						// lower bound: keep the weakest (smallest k)
-						if (entry[1] == null || k < ((Number) ((Constant) entry[1]).getValue()).intValue())
+						if (entry[1] == null || k < ((Number) ((Constant) entry[1]).getValue()).floatValue())
 							entry[1] = bin.getRight();
 					} else {
 						// upper bound: keep the strictest (smallest k)
-						if (entry[2] == null || k < ((Number) ((Constant) entry[2]).getValue()).intValue())
+						if (entry[2] == null || k < ((Number) ((Constant) entry[2]).getValue()).floatValue())
 							entry[2] = bin.getRight();
 					}
 					continue;
@@ -161,8 +165,8 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 			Constant ub = (Constant) entry[2];
 
 			if (lb != null && ub != null) {
-				int lbVal = ((Number) lb.getValue()).intValue();
-				int ubVal = ((Number) ub.getValue()).intValue();
+				float lbVal = ((Number) lb.getValue()).floatValue();
+				float ubVal = ((Number) ub.getValue()).floatValue();
 				if (lbVal >= ubVal)
 					return null; // contradiction: var > lb && var < ub with lb
 									// >= ub
@@ -197,7 +201,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 			Object val = ((Constant) expr).getValue();
 			if (!(val instanceof Number))
 				return Optional.empty();
-			return Optional.of(LinearCombination.ofConstant(((Number) val).intValue()));
+			return Optional.of(LinearCombination.ofConstant(((Number) val).floatValue()));
 		}
 
 		if (expr instanceof Variable)
@@ -242,19 +246,114 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 	}
 
 	/**
-	 * Simplifies a fully evaluated symbolic expression to its canonical linear
-	 * form via {@link #toLinearCombination(SymbolicExpression)}. Returns the
-	 * expression unchanged when it is non-linear.
+	 * Simplifies a fully evaluated symbolic expression. First attempts to
+	 * reduce it to a canonical linear form via
+	 * {@link #toLinearCombination(SymbolicExpression)}. When that fails,
+	 * applies relu-specific simplifications for {@code max(0, inner)}
+	 * expressions:
+	 * <ul>
+	 * <li>if {@code inner} is a non-negative constant, returns {@code inner};</li>
+	 * <li>if {@code inner} is a negative constant, returns {@code 0};</li>
+	 * <li>if {@code inner} is itself a relu expression (always &ge; 0), strips
+	 * the outer {@code max(0, ...)}, returning {@code inner};</li>
+	 * <li>if {@code state} is provided and the path condition implies
+	 * {@code inner &ge; 0}, returns {@code inner};</li>
+	 * <li>otherwise rebuilds {@code max(0, simplified_inner)}.</li>
+	 * </ul>
 	 *
-	 * @param expr the symbolic expression to simplify
+	 * @param expr  the symbolic expression to simplify
+	 * @param state the current symbolic state used to query the path condition
+	 *                  for sign information; may be {@code null}
 	 *
-	 * @return the canonical linear-form expression, or {@code expr} if it
-	 *             cannot be reduced to a linear combination
+	 * @return the simplified expression
 	 */
-	private SymbolicExpression simplify(SymbolicExpression expr) {
-		return toLinearCombination(expr)
-				.map(lc -> lc.toExpression(expr.getStaticType(), expr.getCodeLocation()))
-				.orElse(expr);
+	private SymbolicExpression simplify(SymbolicExpression expr, SymbolicDomainLattice state) {
+		Optional<LinearCombination> lc = toLinearCombination(expr);
+		if (lc.isPresent())
+			return lc.get().toExpression(expr.getStaticType(), expr.getCodeLocation());
+
+		// relu simplification: max(0, inner)
+		SymbolicExpression inner = extractReluInner(expr);
+		if (inner != null) {
+			SymbolicExpression simplifiedInner = simplify(inner, state);
+
+			// max(0, constant) → evaluate statically
+			if (simplifiedInner instanceof Constant) {
+				Object val = ((Constant) simplifiedInner).getValue();
+				if (val instanceof Number) {
+					if (((Number) val).doubleValue() >= 0.0)
+						return simplifiedInner;
+					return new Constant(expr.getStaticType(), 0, expr.getCodeLocation());
+				}
+			}
+
+			// max(0, relu_expr) → relu_expr, since relu_expr is already >= 0
+			if (extractReluInner(simplifiedInner) != null)
+				return simplifiedInner;
+
+			// max(0, e) → e when the path condition implies e >= 0
+			if (state != null) {
+				SignLattice sign = state.getSignOfExpr(simplifiedInner);
+				if (sign.isPositive() || sign.isZero())
+					return simplifiedInner;
+			}
+
+			// Rebuild with simplified inner if it changed
+			if (simplifiedInner != inner) {
+				BinaryExpression bin = (BinaryExpression) expr;
+				SymbolicExpression newLeft = isZeroConstant(bin.getLeft()) ? bin.getLeft() : simplifiedInner;
+				SymbolicExpression newRight = isZeroConstant(bin.getLeft()) ? simplifiedInner : bin.getRight();
+				return new BinaryExpression(expr.getStaticType(), newLeft, newRight,
+						NumericMax.INSTANCE, expr.getCodeLocation());
+			}
+		}
+
+		// For any other binary expression, recursively simplify the children.
+		// This propagates path-condition-based simplifications (e.g. stripping
+		// max wrappers) through compound expressions such as 2.0 * max(0, e).
+		if (expr instanceof BinaryExpression) {
+			BinaryExpression bin = (BinaryExpression) expr;
+			SymbolicExpression newLeft = simplify(bin.getLeft(), state);
+			SymbolicExpression newRight = simplify(bin.getRight(), state);
+			if (newLeft != bin.getLeft() || newRight != bin.getRight()) {
+				BinaryExpression rebuilt = new BinaryExpression(
+						bin.getStaticType(), newLeft, newRight,
+						bin.getOperator(), bin.getCodeLocation());
+				// Retry on the rebuilt expression — now linear-combination
+				// simplification may succeed where it previously failed.
+				return simplify(rebuilt, state);
+			}
+		}
+
+		return expr;
+	}
+
+	/**
+	 * Returns {@code true} if {@code expr} is a numeric zero constant.
+	 */
+	private static boolean isZeroConstant(SymbolicExpression expr) {
+		if (!(expr instanceof Constant))
+			return false;
+		Object val = ((Constant) expr).getValue();
+		return val instanceof Number && ((Number) val).doubleValue() == 0.0;
+	}
+
+	/**
+	 * If {@code expr} matches the relu pattern {@code max(0, inner)} or
+	 * {@code max(inner, 0)}, returns {@code inner}; otherwise returns
+	 * {@code null}.
+	 */
+	private static SymbolicExpression extractReluInner(SymbolicExpression expr) {
+		if (!(expr instanceof BinaryExpression))
+			return null;
+		BinaryExpression bin = (BinaryExpression) expr;
+		if (!(bin.getOperator() instanceof NumericMax))
+			return null;
+		if (isZeroConstant(bin.getLeft()))
+			return bin.getRight();
+		if (isZeroConstant(bin.getRight()))
+			return bin.getLeft();
+		return null;
 	}
 
 	/**
@@ -267,8 +366,8 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 	 * name is the string representation of the call-site code location.
 	 * <li>{@link Constant} nodes are returned unchanged.
 	 * <li>{@link BinaryExpression} nodes are evaluated recursively and then
-	 * simplified to canonical linear form via
-	 * {@link #simplify(SymbolicExpression)}.
+	 * simplified to canonical form via
+	 * {@link #simplify(SymbolicExpression, SymbolicDomainLattice)}.
 	 * </ol>
 	 * 
 	 * @param state
@@ -283,6 +382,10 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 				return expr;
 			return set.elements.iterator().next();
 		}
+
+		if (expr instanceof PushIntv)
+			return new IntvSymbolicVariable(expr.getStaticType(),
+					expr.getCodeLocation().toString(), expr.getCodeLocation());
 
 		if (expr instanceof PushAny)
 			return new SymbolicVariable(expr.getStaticType(),
@@ -301,7 +404,7 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 			BinaryExpression evaluated = new BinaryExpression(
 					bin.getStaticType(), left, right,
 					bin.getOperator(), bin.getCodeLocation());
-			return simplify(evaluated);
+			return simplify(evaluated, state);
 		}
 
 		return expr;
@@ -311,13 +414,45 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 	public SymbolicDomainLattice assign(SymbolicDomainLattice state, Identifier id, ValueExpression expression,
 			ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
 		SymbolicExpression v = eval(state, expression);
+		SymbolicExpression newPathCondition = state.getPathCondition();
+
+		// Relu simplification: if v is max(0, inner), try to simplify using
+		// the sign of inner recorded in the path condition.
+		SymbolicExpression reluInner = extractReluInner(v);
+		if (reluInner != null) {
+			SignLattice innerSign = state.getSignOfExpr(reluInner);
+			if (innerSign.isPositive() || innerSign.isZero()) {
+				// inner >= 0, so max(0, inner) = inner
+				v = reluInner;
+			} else if (innerSign.isNegative()) {
+				// inner < 0, so max(0, inner) = 0
+				v = new Constant(v.getStaticType(), 0, v.getCodeLocation());
+			} else {
+				// Sign unknown: add 'inner >= 0' to the path condition, then
+				// immediately re-simplify v with the updated PC so that
+				// max(0, inner) collapses to inner on the spot.
+				Constant zero = new Constant(Untyped.INSTANCE, 0, SyntheticLocation.INSTANCE);
+				SymbolicExpression geZero = new BinaryExpression(
+						Untyped.INSTANCE, reluInner, zero,
+						ComparisonGe.INSTANCE, SyntheticLocation.INSTANCE);
+				newPathCondition = simplifyPathCondition(new BinaryExpression(
+						Untyped.INSTANCE, newPathCondition, geZero,
+						LogicalAnd.INSTANCE, SyntheticLocation.INSTANCE));
+				// Re-simplify with the updated path condition: now
+				// getSignOfExpr(inner) returns ZERO, so max(0, inner) → inner.
+				SymbolicDomainLattice tempState = new SymbolicDomainLattice(
+						newPathCondition, state.getSymbolicState());
+				v = simplify(v, tempState);
+			}
+		}
+
 		GenericMapLattice<Identifier, ExpressionSet> cpy = state.getSymbolicState().putState(id, new ExpressionSet(v));
 
-		// If the RHS is a signed input, record the constraint in the path
+		// If the RHS is a typed input, record the constraint(s) in the path
 		// condition.
-		SymbolicExpression newPathCondition = state.getPathCondition();
 		if (v instanceof SymbolicVariable) {
 			Constant zero = new Constant(Untyped.INSTANCE, 0, SyntheticLocation.INSTANCE);
+			Constant one = new Constant(Untyped.INSTANCE, 1, SyntheticLocation.INSTANCE);
 			SymbolicExpression constraint = null;
 			if (expression instanceof PushPos)
 				constraint = new BinaryExpression(Untyped.INSTANCE, v, zero, ComparisonGt.INSTANCE,
@@ -325,9 +460,19 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 			else if (expression instanceof PushNeg)
 				constraint = new BinaryExpression(Untyped.INSTANCE, v, zero, ComparisonLt.INSTANCE,
 						SyntheticLocation.INSTANCE);
+			else if (expression instanceof PushIntv) {
+				// v >= 0
+				SymbolicExpression geZero = new BinaryExpression(Untyped.INSTANCE, v, zero,
+						ComparisonGe.INSTANCE, SyntheticLocation.INSTANCE);
+				// v <= 1
+				SymbolicExpression leOne = new BinaryExpression(Untyped.INSTANCE, v, one,
+						ComparisonLe.INSTANCE, SyntheticLocation.INSTANCE);
+				constraint = new BinaryExpression(Untyped.INSTANCE, geZero, leOne,
+						LogicalAnd.INSTANCE, SyntheticLocation.INSTANCE);
+			}
 			if (constraint != null)
 				newPathCondition = simplifyPathCondition(new BinaryExpression(
-						Untyped.INSTANCE, state.getPathCondition(), constraint,
+						Untyped.INSTANCE, newPathCondition, constraint,
 						LogicalAnd.INSTANCE, SyntheticLocation.INSTANCE));
 		}
 

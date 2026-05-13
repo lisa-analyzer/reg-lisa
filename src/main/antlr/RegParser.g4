@@ -25,6 +25,7 @@ e
    | ID ASSIGN a # assign
    | LPAR b COND ((SEQ e)+)? RPAR # cond
    | LPAR b COND (SEQ e)+ RPAR TIMES # kleene
+   | RELU LPAR a RPAR # relu
    ;
    // arithmetic expression
    
@@ -39,6 +40,7 @@ a
    | INPUT # input
    | INPUTPOS # inputPos
    | INPUTNEG # inputNeg
+   | INPUTINTV # inputIntv
    ;
    // boolean expression
    

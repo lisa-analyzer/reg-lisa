@@ -14,7 +14,9 @@ import it.unive.lisa.symbolic.value.Constant;
 import it.unive.lisa.symbolic.value.Identifier;
 import it.unive.lisa.symbolic.value.Variable;
 import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonGe;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonGt;
+import it.unive.lisa.symbolic.value.operator.binary.ComparisonLe;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonLt;
 import it.unive.lisa.symbolic.value.operator.binary.LogicalAnd;
 import it.unive.lisa.type.Untyped;
@@ -414,23 +416,43 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 		return extractSign(pathCondition, var);
 	}
 
+	/**
+	 * Returns the sign of an arbitrary symbolic expression as recorded in the
+	 * path condition, or {@link SignLattice#TOP} if no constraint is known.
+	 *
+	 * @param expr the symbolic expression to query
+	 *
+	 * @return the sign derived from the path condition
+	 */
+	public SignLattice getSignOfExpr(SymbolicExpression expr) {
+		return extractSign(pathCondition, expr);
+	}
+
 	private static SignLattice extractSign(
-			SymbolicExpression pc, SymbolicVariable var) {
+			SymbolicExpression pc, SymbolicExpression target) {
 		if (!(pc instanceof BinaryExpression))
 			return SignLattice.TOP;
 		BinaryExpression bin = (BinaryExpression) pc;
 		BinaryOperator op = bin.getOperator();
 		if (op instanceof LogicalAnd) {
-			SignLattice l = extractSign(bin.getLeft(), var);
+			SignLattice l = extractSign(bin.getLeft(), target);
 			if (!l.isTop())
 				return l;
-			return extractSign(bin.getRight(), var);
+			return extractSign(bin.getRight(), target);
 		}
-		if (bin.getLeft().equals(var)) {
+		if (bin.getLeft().equals(target)) {
 			if (op instanceof ComparisonGt)
 				return SignLattice.POS;
 			if (op instanceof ComparisonLt)
 				return SignLattice.NEG;
+			// expr >= 0: non-negative; return ZERO as a proxy so that callers
+			// treating ZERO-or-POS as "non-negative" can simplify max(0, expr)
+			// → expr.
+			if (op instanceof ComparisonGe)
+				return SignLattice.ZERO;
+			// expr <= k: cannot determine sign from an upper bound alone.
+			if (op instanceof ComparisonLe)
+				return SignLattice.TOP;
 		}
 		return SignLattice.TOP;
 	}
