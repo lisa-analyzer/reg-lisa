@@ -6,7 +6,7 @@ import java.io.IOException;
 import org.junit.Test;
 
 import it.unive.lisa.AnalysisSetupException;
-import it.unive.lisa.outputs.HtmlResults;
+import it.unive.lisa.outputs.HtmlInputs;
 import it.unive.lisa.outputs.JSONReportDumper;
 import it.unive.lisa.outputs.JSONResults;
 
@@ -20,13 +20,13 @@ public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
 		conf.outputs.add(new JSONReportDumper());
 		conf.outputs.add(new JSONResults<>());
 		if (generateCfg)
-			conf.outputs.add(new HtmlResults<>(true));
+			conf.outputs.add(new HtmlInputs(true));
 		return conf;
 	}
 
 	@Test
 	public void testCFG01() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("cfg-01", false);
+		CronConfiguration conf = createConfiguration("cfg-01", true);
 		perform(conf);
 	}
 
