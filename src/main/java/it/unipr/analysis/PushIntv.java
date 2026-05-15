@@ -11,7 +11,7 @@ import it.unive.lisa.type.Type;
  * downstream evaluators can return {@code [0, 1]} for interval analysis and
  * {@code TOP} for sign analysis.
  *
- * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
  */
 public class PushIntv extends PushAny {
 

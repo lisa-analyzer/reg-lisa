@@ -20,14 +20,34 @@ import it.unive.lisa.util.representation.StructuredRepresentation;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+/**
+ * The lattice element of {@link CombinationDomain}. Each element pairs a
+ * {@link SymbolicDomainLattice} (tracking exact linear combinations of symbolic
+ * input variables) with a {@link ValueEnvironment}{@code <V>} (recording the
+ * abstract numeric value of each program variable). The two components are kept
+ * consistent: whenever the symbolic component carries useful information,
+ * {@link #refineEnvFromSymbolic} is used to narrow the value environment
+ * accordingly.
+ * <p>
+ * Lattice operations follow a <em>keep-pre-loop-symbolic</em> policy: at a join
+ * point (loop back-edge), {@link #lub} retains the pre-loop symbolic state
+ * (from {@code this}) while using the back-edge symbolic state (from
+ * {@code other}) only to refine the joined value environment, and then discards
+ * it. This prevents the symbolic component from accumulating loop-carried
+ * bindings.
+ *
+ * @param <V> the abstract value type stored in the value environment
+ *
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
+ */
 public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLattice<CombinationDomainLattice<V>> {
 
 	/**
 	 * Strategy for deriving an abstract value of type {@code V} from a symbolic
-	 * expression. Implementations handle all expression shapes: {@link Constant},
-	 * {@link SymbolicVariable}, {@link Identifier} (looked up in {@code env}),
-	 * and {@link BinaryExpression} (evaluated recursively using the domain's
-	 * arithmetic).
+	 * expression. Implementations handle all expression shapes:
+	 * {@link Constant}, {@link SymbolicVariable}, {@link Identifier} (looked up
+	 * in {@code env}), and {@link BinaryExpression} (evaluated recursively
+	 * using the domain's arithmetic).
 	 *
 	 * @param <V> the abstract value type
 	 */
@@ -85,15 +105,14 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 	}
 
 	/**
-	 * Builds a combination domain from all three components.
+	 * Builds a combination domain lattice element from all three components.
 	 *
 	 * @param symbolic  the symbolic component
 	 * @param env       the value environment component
-	 * @param savedEnv  the auxiliary environment accumulated from assume calls
-	 *                      (used only at {@link #popScope})
 	 * @param evaluator the expression evaluator strategy
 	 */
-	public CombinationDomainLattice(SymbolicDomainLattice symbolic, ValueEnvironment<V> env, ExpressionEvaluator<V> evaluator) {
+	public CombinationDomainLattice(SymbolicDomainLattice symbolic, ValueEnvironment<V> env,
+			ExpressionEvaluator<V> evaluator) {
 		this.symbolic = symbolic;
 		this.env = env;
 		this.evaluator = evaluator;
@@ -196,6 +215,13 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return new CombinationDomainLattice<>(other.symbolic, this.env.isTop() ? other.env : lubEnv, evaluator);
 	}
 
+	/**
+	 * Computes the widening of this element and {@code other}. Since the
+	 * symbolic component is reset to top at every join point (preventing
+	 * unbounded growth), widening is simply the result of the second iteration:
+	 * {@code other} is returned directly (subject to the usual top/bottom
+	 * short-circuits).
+	 */
 	@Override
 	public CombinationDomainLattice<V> widening(CombinationDomainLattice<V> other) throws SemanticException {
 		if (this == other || isBottom() || other.isTop() || equals(other))
@@ -228,8 +254,8 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 	/**
 	 * Re-derives the abstract value for each variable tracked in {@code sym}
 	 * from its symbolic expression using {@code evaluator}, and overrides the
-	 * binding in {@code base} only when the derived value is neither top nor
-	 * bottom.
+	 * corresponding binding in {@code base} with the derived value. If
+	 * {@code sym} is top or bottom it is returned unchanged.
 	 *
 	 * @param <V>       the abstract value type
 	 * @param sym       the symbolic state to use for refinement
@@ -244,7 +270,7 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 			SymbolicDomainLattice sym,
 			ValueEnvironment<V> base,
 			ExpressionEvaluator<V> evaluator)
-					throws SemanticException {
+			throws SemanticException {
 		if (sym.isTop() || sym.isBottom())
 			return base;
 
@@ -267,10 +293,14 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 	 * Returns an {@link ExpressionEvaluator} that derives {@link SignLattice}
 	 * values from symbolic expressions:
 	 * <ul>
-	 * <li>{@link Constant} → ZERO / POS / NEG by numeric value;</li>
-	 * <li>{@link SymbolicVariable} → sign from the path condition (TOP for
-	 * plain {@code input()}, POS for {@code inputPos()}, NEG for
-	 * {@code inputNeg()});</li>
+	 * <li>{@link Constant} → ZERO / POS / NEG according to the numeric
+	 * value;</li>
+	 * <li>{@link IntvSymbolicVariable} (introduced by {@code inputIntv()}) →
+	 * TOP (the sign of a value in [0, 1] is unknown without further
+	 * analysis);</li>
+	 * <li>{@link SymbolicVariable} → sign from the path condition: POS for
+	 * {@code inputPos()}, NEG for {@code inputNeg()}, TOP for plain
+	 * {@code input()};</li>
 	 * <li>{@link Identifier} → looked up in the value environment;</li>
 	 * <li>{@link BinaryExpression} → evaluated recursively via
 	 * {@link Sign#evalBinaryExpression}.</li>
@@ -351,15 +381,18 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 	// -----------------------------------------------------------------------
 
 	/**
-	 * Returns an {@link ExpressionEvaluator} that derives {@link DecimalInterval}
-	 * values from symbolic expressions:
+	 * Returns an {@link ExpressionEvaluator} that derives
+	 * {@link DecimalInterval} values from symbolic expressions:
 	 * <ul>
 	 * <li>{@link Constant} → singleton interval {@code [n, n]}, supporting
 	 * {@code Integer}, {@code Double}, {@code Float}, and {@code Long}
 	 * constants;</li>
+	 * <li>{@link IntvSymbolicVariable} (introduced by {@code inputIntv()}) →
+	 * {@code [0, 1]} directly;</li>
 	 * <li>{@link SymbolicVariable} → interval derived from the path condition:
 	 * {@code [1, +∞]} for {@code inputPos()}, {@code [-∞, -1]} for
-	 * {@code inputNeg()}, {@code [0, 0]} for zero-constrained, TOP otherwise;</li>
+	 * {@code inputNeg()}, {@code [0, 0]} for zero-constrained, TOP
+	 * otherwise;</li>
 	 * <li>{@link Identifier} → looked up in the value environment;</li>
 	 * <li>{@link BinaryExpression} → evaluated recursively via
 	 * {@link DecimalDomain#evalBinaryExpression}.</li>
@@ -415,14 +448,29 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return DecimalInterval.TOP;
 	}
 
+	/**
+	 * Returns the symbolic component of this lattice element.
+	 *
+	 * @return the symbolic domain lattice
+	 */
 	public SymbolicDomainLattice getSymbolic() {
 		return symbolic;
 	}
 
+	/**
+	 * Returns the value environment component of this lattice element.
+	 *
+	 * @return the value environment
+	 */
 	public ValueEnvironment<V> getEnv() {
 		return env;
 	}
 
+	/**
+	 * Returns the expression evaluator strategy used by this lattice element.
+	 *
+	 * @return the expression evaluator
+	 */
 	public ExpressionEvaluator<V> getEvaluator() {
 		return evaluator;
 	}

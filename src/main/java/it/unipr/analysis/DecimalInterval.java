@@ -14,7 +14,7 @@ import java.util.Objects;
  * integers, making this suitable for analyses that involve non-integer
  * constants.
  *
- * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
  */
 public class DecimalInterval
 		implements

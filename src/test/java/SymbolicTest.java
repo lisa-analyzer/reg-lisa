@@ -30,7 +30,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		conf.interproceduralAnalysis = new ModularWorstCaseAnalysis<>();
 		return conf;
 	}
-	
+
 	private static CronConfiguration intvConf(String subDir, boolean generateCfg) {
 		CronConfiguration conf = new CronConfiguration();
 		conf.testDir = "symbolic/" + subDir;
@@ -55,7 +55,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		CronConfiguration conf = intvConf("simpleNN", false);
 		perform(conf);
 	}
-	
+
 	@Test
 	public void testNN() throws AnalysisSetupException, IOException {
 		CronConfiguration conf = intvConf("NN", false);

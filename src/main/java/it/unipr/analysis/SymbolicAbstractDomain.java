@@ -5,6 +5,7 @@ import it.unive.lisa.analysis.SemanticOracle;
 import it.unive.lisa.analysis.value.ValueDomain;
 import it.unive.lisa.lattices.ExpressionSet;
 import it.unive.lisa.lattices.GenericMapLattice;
+import it.unive.lisa.lattices.numeric.SignLattice;
 import it.unive.lisa.program.SyntheticLocation;
 import it.unive.lisa.program.cfg.ProgramPoint;
 import it.unive.lisa.symbolic.SymbolicExpression;
@@ -15,7 +16,6 @@ import it.unive.lisa.symbolic.value.PushAny;
 import it.unive.lisa.symbolic.value.ValueExpression;
 import it.unive.lisa.symbolic.value.Variable;
 import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
-import it.unive.lisa.lattices.numeric.SignLattice;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonGe;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonGt;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonLe;
@@ -40,7 +40,7 @@ import java.util.Optional;
  * expressions are simplified to a canonical linear-combination form via
  * {@link #simplify(SymbolicExpression)}.
  *
- * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
  */
 public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice> {
 
@@ -252,7 +252,8 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 	 * applies relu-specific simplifications for {@code max(0, inner)}
 	 * expressions:
 	 * <ul>
-	 * <li>if {@code inner} is a non-negative constant, returns {@code inner};</li>
+	 * <li>if {@code inner} is a non-negative constant, returns
+	 * {@code inner};</li>
 	 * <li>if {@code inner} is a negative constant, returns {@code 0};</li>
 	 * <li>if {@code inner} is itself a relu expression (always &ge; 0), strips
 	 * the outer {@code max(0, ...)}, returning {@code inner};</li>
@@ -369,11 +370,13 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 	 * simplified to canonical form via
 	 * {@link #simplify(SymbolicExpression, SymbolicDomainLattice)}.
 	 * </ol>
-	 * 
-	 * @param state
+	 *
+	 * @param state the current symbolic domain state, used to resolve
+	 *                  identifiers and apply path-condition-based
+	 *                  simplifications
 	 * @param expr  the symbolic expression to evaluate
 	 *
-	 * @return the evaluated symbolic expression
+	 * @return the evaluated and simplified symbolic expression
 	 */
 	public SymbolicExpression eval(SymbolicDomainLattice state, SymbolicExpression expr) {
 		if (expr instanceof Identifier) {
@@ -410,6 +413,16 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 		return expr;
 	}
 
+	/**
+	 * Handles an assignment {@code id := expression}. The right-hand side is
+	 * evaluated via {@link #eval} to produce a symbolic expression, which is
+	 * stored in the symbolic state under {@code id}. When the result is a typed
+	 * symbolic variable ({@link PushPos}, {@link PushNeg}, or
+	 * {@link PushIntv}), the corresponding range constraint is added to the
+	 * path condition. When the result is a {@code max(0, inner)} ReLU
+	 * expression, path-condition sign information is used to simplify it where
+	 * possible.
+	 */
 	@Override
 	public SymbolicDomainLattice assign(SymbolicDomainLattice state, Identifier id, ValueExpression expression,
 			ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
@@ -479,18 +492,31 @@ public class SymbolicAbstractDomain implements ValueDomain<SymbolicDomainLattice
 		return new SymbolicDomainLattice(newPathCondition, cpy);
 	}
 
+	/**
+	 * Advances the symbolic state past a non-assignment expression. The
+	 * symbolic domain does not track expression evaluations directly, so the
+	 * state is returned unchanged.
+	 */
 	@Override
 	public SymbolicDomainLattice smallStepSemantics(SymbolicDomainLattice state, ValueExpression expression,
 			ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
 		return state;
 	}
 
+	/**
+	 * Assumes that {@code expression} holds. The symbolic domain does not
+	 * perform path-splitting, so the state is returned unchanged; branch
+	 * conditions are handled at the {@link CombinationDomain} level.
+	 */
 	@Override
 	public SymbolicDomainLattice assume(SymbolicDomainLattice state, ValueExpression expression, ProgramPoint src,
 			ProgramPoint dest, SemanticOracle oracle) throws SemanticException {
 		return state;
 	}
 
+	/**
+	 * Returns the initial (top) symbolic lattice element.
+	 */
 	@Override
 	public SymbolicDomainLattice makeLattice() {
 		return new SymbolicDomainLattice();

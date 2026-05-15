@@ -12,7 +12,7 @@ import it.unive.lisa.type.Type;
  * <li>interval analysis → {@code [0.0, 1.0]}.</li>
  * </ul>
  *
- * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
  */
 public class IntvSymbolicVariable extends SymbolicVariable {
 

@@ -27,6 +27,21 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
+/**
+ * The lattice element of the symbolic abstract domain. Each element pairs a
+ * <em>path condition</em> (a conjunction of sign constraints on symbolic
+ * variables, represented as a {@link SymbolicExpression}) with a <em>symbolic
+ * state</em> (a {@link GenericMapLattice} mapping each tracked
+ * {@link Identifier} to an {@link ExpressionSet} containing its symbolic
+ * representative expression).
+ * <p>
+ * Symbolic expressions are linear combinations of {@link SymbolicVariable}
+ * instances (one per {@code input()} call site) and numeric constants. The path
+ * condition records sign constraints added by typed inputs ({@code inputPos()},
+ * {@code inputNeg()}, {@code inputIntv()}) and by ReLU activations.
+ *
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
+ */
 public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice> {
 	/**
 	 * A synthetic {@link Constant} representing the boolean value {@code true},
@@ -57,7 +72,7 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 	}
 
 	/**
-	 * Builds a {@link SymbolicAbstractDomain} with the given path condition and
+	 * Builds a {@link SymbolicDomainLattice} with the given path condition and
 	 * symbolic state.
 	 *
 	 * @param pathCondition the path condition of this abstract element
@@ -358,10 +373,20 @@ public class SymbolicDomainLattice implements ValueLattice<SymbolicDomainLattice
 		return Objects.equals(pathCondition, other.pathCondition) && Objects.equals(symbolicState, other.symbolicState);
 	}
 
+	/**
+	 * Returns the path condition of this abstract element.
+	 *
+	 * @return the path condition expression (never {@code null})
+	 */
 	public SymbolicExpression getPathCondition() {
 		return pathCondition;
 	}
 
+	/**
+	 * Returns the symbolic state of this abstract element.
+	 *
+	 * @return the functional map from identifiers to symbolic expression sets
+	 */
 	public GenericMapLattice<Identifier, ExpressionSet> getSymbolicState() {
 		return symbolicState;
 	}

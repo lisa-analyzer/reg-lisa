@@ -18,12 +18,12 @@ import it.unive.lisa.symbolic.value.operator.MultiplicationOperator;
 import it.unive.lisa.symbolic.value.operator.SubtractionOperator;
 import it.unive.lisa.symbolic.value.operator.binary.BinaryOperator;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonEq;
-import it.unive.lisa.symbolic.value.operator.binary.NumericMax;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonGe;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonGt;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonLe;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonLt;
 import it.unive.lisa.symbolic.value.operator.binary.ComparisonNe;
+import it.unive.lisa.symbolic.value.operator.binary.NumericMax;
 import it.unive.lisa.symbolic.value.operator.unary.NumericNegation;
 import it.unive.lisa.util.numeric.MathNumber;
 
@@ -33,12 +33,17 @@ import it.unive.lisa.util.numeric.MathNumber;
  * constants (unlike LiSA's built-in {@code Interval} which only handles
  * {@code Integer} constants).
  *
- * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
  */
 public class DecimalDomain
 		implements
 		BaseNonRelationalValueDomain<DecimalInterval> {
 
+	/**
+	 * Evaluates a numeric constant to a singleton interval {@code [n, n]}.
+	 * Supports {@code Integer}, {@code Double}, {@code Float}, and {@code Long}
+	 * values; returns {@link DecimalInterval#TOP} for all other constant types.
+	 */
 	@Override
 	public DecimalInterval evalConstant(
 			Constant constant,
@@ -59,6 +64,13 @@ public class DecimalDomain
 		return new DecimalInterval(new MathNumber(d), new MathNumber(d));
 	}
 
+	/**
+	 * Evaluates a non-deterministic input expression. {@link PushIntv}
+	 * (introduced by {@code inputIntv()}) is mapped to {@code [0, 1]}. All
+	 * other {@link PushAny} variants (e.g., plain {@code input()},
+	 * {@code inputPos()}, {@code inputNeg()}) return
+	 * {@link DecimalInterval#TOP}.
+	 */
 	@Override
 	public DecimalInterval evalPushAny(
 			PushAny pushAny,
@@ -69,6 +81,10 @@ public class DecimalDomain
 		return DecimalInterval.TOP;
 	}
 
+	/**
+	 * Evaluates a unary expression. Supports numeric negation ({@code -arg});
+	 * returns {@link DecimalInterval#TOP} for all other operators.
+	 */
 	@Override
 	public DecimalInterval evalUnaryExpression(
 			UnaryExpression expression,
@@ -83,6 +99,13 @@ public class DecimalDomain
 		return DecimalInterval.TOP;
 	}
 
+	/**
+	 * Evaluates a binary arithmetic expression over decimal intervals.
+	 * Supported operators: addition, subtraction, multiplication, division, and
+	 * {@code max}. Division by zero returns {@link DecimalInterval#BOTTOM}.
+	 * Returns {@link DecimalInterval#TOP} for unsupported operators and (except
+	 * for division and {@code max}) when either operand is top.
+	 */
 	@Override
 	public DecimalInterval evalBinaryExpression(
 			BinaryExpression expression,
@@ -116,6 +139,12 @@ public class DecimalDomain
 		return DecimalInterval.TOP;
 	}
 
+	/**
+	 * Checks whether a binary comparison expression is satisfied by the given
+	 * interval operands. Returns {@link Satisfiability#UNKNOWN} when either
+	 * operand is top or the result cannot be determined precisely from the
+	 * interval bounds.
+	 */
 	@Override
 	public Satisfiability satisfiesBinaryExpression(
 			BinaryExpression expression,
@@ -181,6 +210,14 @@ public class DecimalDomain
 		return Satisfiability.UNKNOWN;
 	}
 
+	/**
+	 * Refines the value environment by assuming that the binary comparison
+	 * {@code expression} holds. When one side is a plain {@link Identifier},
+	 * its interval is narrowed via {@link #updateValue} to the range compatible
+	 * with the constraint. Returns the bottom environment if the constraint
+	 * cannot hold, or the input environment unchanged if the expression is
+	 * already fully satisfied or no narrowing is possible.
+	 */
 	@Override
 	public ValueEnvironment<DecimalInterval> assumeBinaryExpression(
 			ValueEnvironment<DecimalInterval> environment,
@@ -280,11 +317,13 @@ public class DecimalDomain
 		return update;
 	}
 
+	/** Returns the top element of the decimal interval lattice. */
 	@Override
 	public DecimalInterval top() {
 		return DecimalInterval.TOP;
 	}
 
+	/** Returns the bottom element of the decimal interval lattice. */
 	@Override
 	public DecimalInterval bottom() {
 		return DecimalInterval.BOTTOM;

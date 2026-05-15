@@ -14,9 +14,9 @@ import it.unive.lisa.program.cfg.statement.NaryExpression;
 import it.unive.lisa.program.cfg.statement.Statement;
 
 /**
- * Represents an {@code inputIntv()} call: a non-deterministic input
- * constrained to the interval {@code [0, 1]}. Sign analysis treats it as
- * {@code TOP}; interval analysis returns {@code [0.0, 1.0]}.
+ * Represents an {@code inputIntv()} call: a non-deterministic input constrained
+ * to the interval {@code [0, 1]}. Sign analysis treats it as {@code TOP};
+ * interval analysis returns {@code [0.0, 1.0]}.
  *
  * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
  */

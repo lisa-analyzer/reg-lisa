@@ -21,7 +21,7 @@ import java.util.Map;
  * {@code c1*x1 + c2*x2 + ... + cn*xn + k}. Zero-coefficient entries are never
  * stored in the coefficients map.
  *
- * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
  */
 class LinearCombination {
 

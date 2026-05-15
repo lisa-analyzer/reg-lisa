@@ -9,7 +9,7 @@ import it.unive.lisa.type.Type;
  * ({@code inputPos()}). The symbolic domain will record {@code x_sym > 0} in
  * the path condition when this expression is assigned to a variable.
  *
- * @author <a href="mailto:vincenzoarceri.92@gmail.com">Vincenzo Arceri</a>
+ * @author <a href="mailto:vincenzo.arceri@unipr.it">Vincenzo Arceri</a>
  */
 public class PushPos extends PushAny {
 
