@@ -1,12 +1,14 @@
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+
+import org.junit.Test;
+
 import it.unive.lisa.AnalysisSetupException;
-import it.unive.lisa.outputs.DotInputs;
+import it.unive.lisa.outputs.HtmlResults;
 import it.unive.lisa.outputs.JSONReportDumper;
 import it.unive.lisa.outputs.JSONResults;
-import java.io.IOException;
-import org.junit.Test;
 
 public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
 
@@ -18,7 +20,7 @@ public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
 		conf.outputs.add(new JSONReportDumper());
 		conf.outputs.add(new JSONResults<>());
 		if (generateCfg)
-			conf.outputs.add(new DotInputs());
+			conf.outputs.add(new HtmlResults<>(true));
 		return conf;
 	}
 
