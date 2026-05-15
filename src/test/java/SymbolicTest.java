@@ -42,6 +42,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 		conf.outputs.add(new JSONResults<>());
 		conf.useWideningPoints = false;
 		conf.compareWithOptimization = false;
+		conf.wideningThreshold = 0;
 		if (generateCfg)
 			conf.outputs.add(new HtmlResults<>(true));
 		conf.callGraph = new RTACallGraph();
@@ -57,7 +58,7 @@ public class SymbolicTest extends RegLiSAAnalysisExecutor {
 	
 	@Test
 	public void testNN() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = intvConf("NN", true);
+		CronConfiguration conf = intvConf("NN", false);
 		perform(conf);
 	}
 

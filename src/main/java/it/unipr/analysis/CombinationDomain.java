@@ -86,7 +86,7 @@ public class CombinationDomain<V extends Lattice<V>> implements ValueDomain<Comb
 
 	private ValueEnvironment<V> refine(
 			SymbolicDomainLattice symbolic, ValueEnvironment<V> base)
-			throws SemanticException {
+					throws SemanticException {
 		return CombinationDomainLattice.refineEnvFromSymbolic(symbolic, base, evaluator);
 	}
 
@@ -139,16 +139,16 @@ public class CombinationDomain<V extends Lattice<V>> implements ValueDomain<Comb
 			return newLattice(state.getSymbolic().top(), state.getEnv());
 		} else if (!isGuard) {
 			return state;
+		} else {
+			ValueEnvironment<V> newEnv = refine(state.getSymbolic(), state.getEnv());
+			return newLattice(state.getSymbolic().top(), newEnv);
 		}
-
-		ValueEnvironment<V> newEnv = refine(state.getSymbolic(), state.getEnv());
-		return newLattice(state.getSymbolic().top(), newEnv);
 	}
 
 	@Override
 	public CombinationDomainLattice<V> assume(CombinationDomainLattice<V> state,
 			ValueExpression expression, ProgramPoint src, ProgramPoint dest, SemanticOracle oracle)
-			throws SemanticException {
+					throws SemanticException {
 		ValueEnvironment<V> refined = refine(state.getSymbolic(), state.getEnv());
 		ValueEnvironment<V> assumed = domain.assume(refined, expression, src, dest, oracle);
 		return newLattice(state.getSymbolic().top(), assumed);

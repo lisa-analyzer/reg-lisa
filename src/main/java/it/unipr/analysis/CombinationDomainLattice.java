@@ -64,15 +64,6 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 	private final ValueEnvironment<V> env;
 
 	/**
-	 * Auxiliary value environment accumulated from {@code assume} calls. Unlike
-	 * {@link #env}, this field is NOT reset to top by assignments; it is used
-	 * exclusively by {@link #popScope} to reconstruct the full environment at
-	 * the return node. Intentionally excluded from {@link #equals},
-	 * {@link #hashCode}, and {@link #lessOrEqual}.
-	 */
-	private final ValueEnvironment<V> savedEnv;
-
-	/**
 	 * The expression evaluator strategy that derives values of type {@code V}
 	 * from symbolic expressions. Excluded from {@link #equals} and
 	 * {@link #hashCode}.
@@ -90,21 +81,7 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 	public CombinationDomainLattice(ExpressionEvaluator<V> evaluator, V latticeTemplate) {
 		this(new SymbolicDomainLattice(),
 				new ValueEnvironment<>(latticeTemplate),
-				new ValueEnvironment<>(latticeTemplate),
 				evaluator);
-	}
-
-	/**
-	 * Builds a combination domain from symbolic and value environment
-	 * components, with {@code savedEnv} initialised to top.
-	 *
-	 * @param symbolic  the symbolic component
-	 * @param env       the value environment component
-	 * @param evaluator the expression evaluator strategy
-	 */
-	public CombinationDomainLattice(SymbolicDomainLattice symbolic, ValueEnvironment<V> env,
-			ExpressionEvaluator<V> evaluator) {
-		this(symbolic, env, new ValueEnvironment<>(env.lattice), evaluator);
 	}
 
 	/**
@@ -116,11 +93,9 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 	 *                      (used only at {@link #popScope})
 	 * @param evaluator the expression evaluator strategy
 	 */
-	public CombinationDomainLattice(SymbolicDomainLattice symbolic, ValueEnvironment<V> env,
-			ValueEnvironment<V> savedEnv, ExpressionEvaluator<V> evaluator) {
+	public CombinationDomainLattice(SymbolicDomainLattice symbolic, ValueEnvironment<V> env, ExpressionEvaluator<V> evaluator) {
 		this.symbolic = symbolic;
 		this.env = env;
-		this.savedEnv = savedEnv;
 		this.evaluator = evaluator;
 	}
 
@@ -129,7 +104,6 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return new CombinationDomainLattice<>(
 				symbolic.store(target, source),
 				env.store(target, source),
-				savedEnv.store(target, source),
 				evaluator);
 	}
 
@@ -143,7 +117,6 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return new CombinationDomainLattice<>(
 				symbolic.forgetIdentifier(id, pp),
 				env.forgetIdentifier(id, pp),
-				savedEnv.forgetIdentifier(id, pp),
 				evaluator);
 	}
 
@@ -153,7 +126,6 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return new CombinationDomainLattice<>(
 				symbolic.forgetIdentifiersIf(test, pp),
 				env.forgetIdentifiersIf(test, pp),
-				savedEnv.forgetIdentifiersIf(test, pp),
 				evaluator);
 	}
 
@@ -163,7 +135,6 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return new CombinationDomainLattice<>(
 				symbolic.forgetIdentifiers(ids, pp),
 				env.forgetIdentifiers(ids, pp),
-				savedEnv.forgetIdentifiers(ids, pp),
 				evaluator);
 	}
 
@@ -181,14 +152,13 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return new CombinationDomainLattice<>(
 				symbolic.pushScope(token, pp),
 				env.pushScope(token, pp),
-				savedEnv.pushScope(token, pp),
 				evaluator);
 	}
 
 	@Override
 	public CombinationDomainLattice<V> popScope(ScopeToken token, ProgramPoint pp) throws SemanticException {
 		SymbolicDomainLattice newSymbolic = symbolic.popScope(token, pp);
-		ValueEnvironment<V> newEnv = refineEnvFromSymbolic(symbolic, savedEnv, evaluator).popScope(token, pp);
+		ValueEnvironment<V> newEnv = env.popScope(token, pp);
 		return new CombinationDomainLattice<>(newSymbolic, newEnv, evaluator);
 	}
 
@@ -222,22 +192,21 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 			return other;
 		if (other.isBottom() || isTop())
 			return this;
+		//		return other;
 		ValueEnvironment<V> lubEnv = env.lub(other.env);
-		ValueEnvironment<V> refined = refineEnvFromSymbolic(other.symbolic, lubEnv, evaluator);
-		ValueEnvironment<V> lubSaved = savedEnv.lub(other.savedEnv);
-		return new CombinationDomainLattice<>(this.symbolic, refined, lubSaved, evaluator);
+		return new CombinationDomainLattice<>(other.symbolic, this.env.isTop() ? other.env : lubEnv, evaluator);
 	}
-	
+
 	@Override
 	public CombinationDomainLattice<V> widening(CombinationDomainLattice<V> other) throws SemanticException {
 		if (this == other || isBottom() || other.isTop() || equals(other))
 			return other;
 		if (other.isBottom() || isTop())
 			return this;
-		ValueEnvironment<V> lubEnv = env.widening(other.env);
-		ValueEnvironment<V> refined = refineEnvFromSymbolic(other.symbolic, lubEnv, evaluator);
-		ValueEnvironment<V> lubSaved = savedEnv.widening(other.savedEnv);
-		return new CombinationDomainLattice<>(this.symbolic, refined, lubSaved, evaluator);
+		return other;
+		//		ValueEnvironment<V> lubEnv = env.lub(other.env);
+		//		return new CombinationDomainLattice<>(other.symbolic, this.env.isTop() ? other.env : lubEnv, evaluator);
+
 	}
 
 	@Override
@@ -279,7 +248,7 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 			SymbolicDomainLattice sym,
 			ValueEnvironment<V> base,
 			ExpressionEvaluator<V> evaluator)
-			throws SemanticException {
+					throws SemanticException {
 		if (sym.isTop() || sym.isBottom())
 			return base;
 
@@ -289,8 +258,7 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 			if (expr == null)
 				continue;
 			V derived = evaluator.evaluate(expr, base, sym);
-			if (!derived.isTop() && !derived.isBottom())
-				result = result.putState(id, derived);
+			result = result.putState(id, derived);
 		}
 		return result;
 	}
@@ -451,20 +419,12 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		return DecimalInterval.TOP;
 	}
 
-	// -----------------------------------------------------------------------
-	// Accessors
-	// -----------------------------------------------------------------------
-
 	public SymbolicDomainLattice getSymbolic() {
 		return symbolic;
 	}
 
 	public ValueEnvironment<V> getEnv() {
 		return env;
-	}
-
-	public ValueEnvironment<V> getSavedEnv() {
-		return savedEnv;
 	}
 
 	public ExpressionEvaluator<V> getEvaluator() {
