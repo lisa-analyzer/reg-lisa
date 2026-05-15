@@ -192,7 +192,6 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 			return other;
 		if (other.isBottom() || isTop())
 			return this;
-		//		return other;
 		ValueEnvironment<V> lubEnv = env.lub(other.env);
 		return new CombinationDomainLattice<>(other.symbolic, this.env.isTop() ? other.env : lubEnv, evaluator);
 	}
@@ -204,9 +203,6 @@ public class CombinationDomainLattice<V extends Lattice<V>> implements ValueLatt
 		if (other.isBottom() || isTop())
 			return this;
 		return other;
-		//		ValueEnvironment<V> lubEnv = env.lub(other.env);
-		//		return new CombinationDomainLattice<>(other.symbolic, this.env.isTop() ? other.env : lubEnv, evaluator);
-
 	}
 
 	@Override

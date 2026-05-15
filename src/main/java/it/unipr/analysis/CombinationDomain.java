@@ -106,15 +106,9 @@ public class CombinationDomain<V extends Lattice<V>> implements ValueDomain<Comb
 			ValueExpression expression, ProgramPoint pp, SemanticOracle oracle) throws SemanticException {
 		boolean isJoinPoint = pp.getCFG().getIngoingEdges((Statement) pp).size() > 1;
 
-		if (isJoinPoint) {
-			return newLattice(
-					new SymbolicAbstractDomain().assign(state.getSymbolic().top(), id, expression, pp, oracle),
-					state.getEnv());
-		} else {
-			return newLattice(
-					new SymbolicAbstractDomain().assign(state.getSymbolic(), id, expression, pp, oracle),
-					state.getEnv());
-		}
+		SymbolicDomainLattice rst = new SymbolicAbstractDomain().assign(isJoinPoint ? state.getSymbolic().top() : state.getSymbolic(), id, expression, pp, oracle);
+		ValueEnvironment<V> sign = refine(rst, state.getEnv());
+		return newLattice(rst, sign);
 	}
 
 	@Override
