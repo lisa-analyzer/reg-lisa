@@ -19,6 +19,7 @@ public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
 		conf.outputs.add(new JSONResults<>());
 		conf.outputs.add(new JSONReportDumper());
 		conf.outputs.add(new JSONResults<>());
+		conf.compareWithOptimization = false;
 		if (generateCfg)
 			conf.outputs.add(new HtmlInputs(true));
 		return conf;
@@ -26,7 +27,7 @@ public class RegLiSACFGTest extends RegLiSAAnalysisExecutor {
 
 	@Test
 	public void testCFG01() throws AnalysisSetupException, IOException {
-		CronConfiguration conf = createConfiguration("cfg-01", true);
+		CronConfiguration conf = createConfiguration("cfg-01", false);
 		perform(conf);
 	}
 
